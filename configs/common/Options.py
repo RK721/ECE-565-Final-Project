@@ -408,6 +408,8 @@ def addCommonOptions(parser):
         "once with: system.cpu[:].mmu. If given multiple times, dump stats "
         "that are present under any of the roots. If not given, dump all "
         "stats. ")
+    parser.add_argument("--floatOpLat", type=int, default=6)
+    parser.add_argument("--floatissueLat", type=int, default=1)
 
 
 def addSEOptions(parser):

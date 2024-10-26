@@ -50,6 +50,8 @@ from m5.objects import *
 from m5.params import NULL
 from m5.util import addToPath, fatal, warn
 
+from MyMinorCPU import MyMinorCPU
+
 addToPath('../')
 
 from ruby import Ruby
@@ -164,7 +166,7 @@ if args.smt and args.num_cpus > 1:
 
 np = args.num_cpus
 mp0_path = multiprocesses[0].executable
-system = System(cpu = [CPUClass(cpu_id=i) for i in range(np)],
+system = System(cpu=[MyMinorCPU(args)],
                 mem_mode = test_mem_mode,
                 mem_ranges = [AddrRange(args.mem_size)],
                 cache_line_size = args.cacheline_size)
