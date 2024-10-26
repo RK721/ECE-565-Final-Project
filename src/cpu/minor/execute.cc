@@ -37,6 +37,7 @@
 
 #include "cpu/minor/execute.hh"
 
+#include <cstdlib>
 #include <functional>
 
 #include "cpu/minor/cpu.hh"
@@ -80,6 +81,7 @@ Execute::Execute(const std::string &name_,
     setTraceTimeOnCommit(params.executeSetTraceTimeOnCommit),
     setTraceTimeOnIssue(params.executeSetTraceTimeOnIssue),
     allowEarlyMemIssue(params.executeAllowEarlyMemoryIssue),
+    branchAcc(params.branchAccuracy),
     noCostFUIndex(fuDescriptions.funcUnits.size() + 1),
     lsq(name_ + ".lsq", name_ + ".dcache_port",
         cpu_, *this,
@@ -251,7 +253,10 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
             *pc_before, *target);
     }
 
-    if (inst->predictedTaken && !force_branch) {
+    int rand = (rand() % 100); //Value 0-99
+    bool misPredict = rand > branchAcc; // If rand > branchAcc, mispredict
+
+    if (inst->predictedTaken && !force_branch && ) {
         /* Predicted to branch */
         if (!must_branch) {
             /* No branch was taken, change stream to get us back to the
@@ -262,7 +267,8 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
                 *inst);
 
             reason = BranchData::BadlyPredictedBranch;
-        } else if (*inst->predictedTarget == *target) {
+        } else if ((*inst->predictedTarget == *target) &&
+                (false == misPredict)) {
             /* Branch prediction got the right target, kill the branch and
              *  carry on.
              *  Note that this information to the branch predictor might get

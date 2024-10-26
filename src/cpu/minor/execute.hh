@@ -115,6 +115,8 @@ class Execute : public Named
      *  of the in flight insts queue if their dependencies are met */
     bool allowEarlyMemIssue;
 
+    int branchAcc;
+
     /** The FU index of the non-existent costless FU for instructions
      *  which pass the MinorDynInst::isNoCostInst test */
     unsigned int noCostFUIndex;
