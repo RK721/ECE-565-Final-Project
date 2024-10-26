@@ -409,6 +409,8 @@ def addCommonOptions(parser):
         "that are present under any of the roots. If not given, dump all "
         "stats. ")
 
+    parser.add_argument("--branchMisPercent", default=100, action="store", type=int,
+        help="Percent of forced mispredicts")
 
 def addSEOptions(parser):
     # Benchmark options

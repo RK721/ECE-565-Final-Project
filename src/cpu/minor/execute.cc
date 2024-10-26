@@ -253,10 +253,10 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
             *pc_before, *target);
     }
 
-    int rand = (rand() % 100); //Value 0-99
-    bool misPredict = rand > branchAcc; // If rand > branchAcc, mispredict
+    int randVal = (std::rand() % 100); //Value 0-99
+    bool misPredict = randVal >= branchAcc; // If rand >= branchAcc, mispredict
 
-    if (inst->predictedTaken && !force_branch && ) {
+    if (inst->predictedTaken && !force_branch) {
         /* Predicted to branch */
         if (!must_branch) {
             /* No branch was taken, change stream to get us back to the
