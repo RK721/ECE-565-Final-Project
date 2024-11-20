@@ -405,7 +405,7 @@ def get_process(options, target_isa="arm"):
     gcc = Process()
     gcc_dir = '403.gcc/'
     gcc.executable =  exe_dir_06+gcc_dir+\
-        'exe/gcc' 
+        'exe/gcc' + exe_suffix
     data= bench_dir_06+gcc_dir+'/data/ref/input/166.i'
     output=output_dir+'166.s'
     gcc.cmd = [gcc.executable] + [data]+['-o',output] + ['-quiet'] \
