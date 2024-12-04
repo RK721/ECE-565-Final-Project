@@ -52,6 +52,7 @@
 #include "debug/MinorInterrupt.hh"
 #include "debug/MinorMem.hh"
 #include "debug/MinorTrace.hh"
+#include "debug/LvpDebug.hh"
 #include "debug/PCEvent.hh"
 #include "mem/packet_access.hh"
 
@@ -289,6 +290,12 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
             inst->pc->instAddr(), target->instAddr(), *inst);
 
         reason = BranchData::UnpredictedBranch;
+    } else if (inst->staticInst->isLoad() && inst->staticInst->getBadLoadPrediction()) {
+        reason = BranchData::BadLVP;
+        target->setPC(inst->pc->instAddr() + 4);
+
+        DPRINTF(LvpDebug, "Bad Load Prediction 0x%x setting pc to 0x%x inst: %s\n",
+            inst->pc->instAddr(), target->instAddr(), *inst);
     } else {
         /* No branch at all */
         reason = BranchData::NoBranch;
@@ -375,31 +382,77 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
         DPRINTF(MinorMem, "Memory response inst: %s addr: 0x%x size: %d\n",
             *inst, packet->getAddr(), packet->getSize());
+        
+        if (packet->getSize() > 0 && LVPTClass::IsPredictableLoad(inst)) {
 
-        if (is_load && packet->getSize() > 7) {
+            uint64_t packetDataLE = 0;
 
-            uint64_t packetDataLE = packet->getLE<uint64_t>();
+            switch(packet->getSize())
+            {
+                case 16:
+                case 8:
+                {
+                    packetDataLE = packet->getLE<uint64_t>();
+                }
+                break;
 
-            DPRINTF(MinorMem, "Memory data LE[0-7]: 0x%016lX\n",
-                    packetDataLE); //Rick This is where the data will be written back to LVPT
+                case 4:
+                {
+                    packetDataLE = packet->getLE<uint32_t>();
+                }
+                break;
 
-            DPRINTF(MinorMem, "Load response inst: %s addr: 0x%x size: %d\n",
-            *inst, packet->getAddr(), packet->getSize());
+                case 2:
+                {
+                    packetDataLE = packet->getLE<uint16_t>();
+                }
+                break;
 
+                default:
+                case 1:
+                {
+                    packetDataLE = packet->getLE<uint8_t>();
+                }
+                break;
+            }
+
+            DPRINTF(LvpDebug, "Memory data: 0x%016lX size in bits: %u\n",
+                    packetDataLE, packet->getSize() * 8); //Rick This is where the data will be written back to LVPT
+
+            DPRINTF(LvpDebug, "Load response inst: %s addr: 0x%x size: %d\n",
+                    *inst, packet->getAddr(), packet->getSize());
 
             cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE);
-        }
-        else if (is_load && packet->getSize() > 3) {
 
-            uint32_t packetDataLE = packet->getLE<uint32_t>();
+            if (inst->staticInst->getIsLoadPredicted() && (packetDataLE != inst->staticInst->getLoadPrediction()))
+            {
+                DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
+                    packetDataLE, inst->staticInst->getLoadPrediction()); 
+                
+                DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
+                        *inst);
 
-            DPRINTF(MinorMem, "Memory data 32 bit LE[0-3]: 0x%016lX\n",
-                    packetDataLE); //Rick This is where the data will be written back to LVPT
+                //LCT: Update Bad Prediction
+                
+                inst->staticInst->setBadLoadPrediction(true);
+            }
+            else if (inst->staticInst->getIsLoadPredicted())
+            {
+                DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
+                    packetDataLE, inst->staticInst->getLoadPrediction());
 
-            DPRINTF(MinorMem, "Load response inst: %s addr: 0x%x size: %d\n",
-            *inst, packet->getAddr(), packet->getSize());
+                DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
+                        *inst);
 
-            cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE);
+                //LCT: Update Good Prediction
+
+                inst->staticInst->setBadLoadPrediction(false);
+            }
+            else
+            {
+                DPRINTF(LvpDebug, "Load wasn't predicted for inst: %s\n",
+                        *inst);
+            }
         }
         else if (is_load)
         {
@@ -711,7 +764,7 @@ Execute::issue(ThreadID thread_id)
                             *inst);
                     } else {
                         /* Can insert the instruction into this FU */
-                        DPRINTF(MinorExecute, "Issuing inst: %s"
+                        DPRINTF(LvpDebug, "Issuing inst: %s"
                             " into FU %d\n", *inst,
                             fu_index);
 
@@ -1364,7 +1417,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         /* Instruction committed but was discarded due to streamSeqNum
          *  mismatch */
         if (discard_inst) {
-            DPRINTF(MinorExecute, "Discarding inst: %s as its stream"
+            DPRINTF(LvpDebug, "Discarding inst: %s as its stream"
                 " state was unexpected, expected: %d\n",
                 *inst, ex_info.streamSeqNum);
 

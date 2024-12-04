@@ -67,6 +67,9 @@ operator <<(std::ostream &os, BranchData::Reason reason)
       case BranchData::BadlyPredictedBranchTarget:
         os << "BadlyPredictedBranchTarget";
         break;
+      case BranchData::BadLVP:
+        os << "BadLVP";
+        break;
       case BranchData::Interrupt:
         os << "Interrupt";
         break;
@@ -98,6 +101,7 @@ BranchData::isStreamChange(const BranchData::Reason reason)
       case UnpredictedBranch:
       case BranchPrediction:
       case BadlyPredictedBranchTarget:
+      case BadLVP:
       case BadlyPredictedBranch:
       case SuspendThread:
       case Interrupt:
@@ -122,6 +126,7 @@ BranchData::isBranch(const BranchData::Reason reason)
       case SuspendThread:
       case Interrupt:
       case HaltFetch:
+      case BadLVP:
         ret = false;
         break;
 

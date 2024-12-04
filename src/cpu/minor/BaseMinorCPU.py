@@ -245,7 +245,7 @@ class BaseMinorCPU(BaseCPU):
         "Number of issuable instructions in Execute each cycle")
     executeMemoryIssueLimit = Param.Unsigned(1,
         "Number of issuable memory instructions in Execute each cycle")
-    executeCommitLimit = Param.Unsigned(2,
+    executeCommitLimit = Param.Unsigned(1,
         "Number of committable instructions in Execute each cycle")
     executeMemoryCommitLimit = Param.Unsigned(1,
         "Number of committable memory references in Execute each cycle")

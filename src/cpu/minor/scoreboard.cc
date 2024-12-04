@@ -29,7 +29,7 @@
  * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
  * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANYF
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -38,8 +38,10 @@
 #include "cpu/minor/scoreboard.hh"
 
 #include "cpu/reg_class.hh"
+#include "debug/LvpDebug.hh"
 #include "debug/MinorScoreboard.hh"
 #include "debug/MinorTiming.hh"
+#include "LVPT.hh"
 
 namespace gem5
 {
@@ -122,9 +124,14 @@ Scoreboard::markupInstDests(MinorDynInstPtr inst, Cycles retire_time,
 
             numResults[index]++;
 
-            if (staticInst->isLoad())
+            if (LVPTClass::IsPredictableLoad(inst))
             {
                 numLoadResults[index]++;
+
+                if (staticInst->getIsLoadPredicted())
+                {
+                    loadResultPredicted[index]++;
+                }
             }
 
             returnCycle[index] = retire_time;
@@ -196,9 +203,14 @@ Scoreboard::clearInstDests(MinorDynInstPtr inst, bool clear_unpredictable)
 
             numResults[index] --;
 
-            if (staticInst->isLoad())
+            if (LVPTClass::IsPredictableLoad(inst))
             {
                 numLoadResults[index]--;
+
+                if (staticInst->getIsLoadPredicted())
+                {
+                    loadResultPredicted[index]--;
+                }
             }
 
             if (numResults[index] == 0) {
@@ -275,10 +287,19 @@ Scoreboard::canInstIssue(MinorDynInstPtr inst,
             }
             else if (numLoadResults[index] != 0)
             {
-                DPRINTF(MinorScoreboard, "Stalling issue for load result: %s"
-                    " returnCycle[index]: %d now: %d relative_latency: %d numLoadResults[index]: %d\n",
-                    *inst, returnCycle[index], now, relative_latency, numLoadResults[index]);
-                ret = false;
+                if (loadResultPredicted[index] != 0)
+                {
+                    DPRINTF(LvpDebug, "Not stalling issue for load result (load result predicted): %s"
+                        " returnCycle[index]: %d now: %d relative_latency: %d numLoadResults[index]: %d\n",
+                        *inst, returnCycle[index], now, relative_latency, numLoadResults[index]);
+                }
+                else
+                {
+                    DPRINTF(LvpDebug, "Stalling issue for load result (load not predicted): %s"
+                        " returnCycle[index]: %d now: %d relative_latency: %d numLoadResults[index]: %d\n",
+                        *inst, returnCycle[index], now, relative_latency, numLoadResults[index]);
+                    ret = false;
+                }
             }
         }
         src_index++;

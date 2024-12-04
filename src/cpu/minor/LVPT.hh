@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "base/named.hh"
+#include "cpu/minor/dyn_inst.hh"
 
 namespace gem5
 {
@@ -17,6 +18,10 @@ class LVPTClass : public Named
     LVPTClass(const std::string &aName, int numEntries);
 
     bool AddEntry(std::uint64_t aAddress, std::uint64_t aData);
+
+    bool GetPrediction(std::uint64_t aAddress, std::uint64_t &aData);
+
+    static bool IsPredictableLoad(MinorDynInstPtr inst);
 
   private:
     struct lvptEntryStruct

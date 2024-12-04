@@ -81,6 +81,8 @@ class PCStateBase : public Serializable
         return static_cast<const Target &>(*this);
     }
 
+    void setPC(Addr val) { _pc = val; }
+
     virtual PCStateBase *clone() const = 0;
     virtual void
     update(const PCStateBase &other)

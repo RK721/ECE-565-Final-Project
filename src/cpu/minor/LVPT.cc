@@ -3,6 +3,7 @@
 #include "LVPT.hh"
 #include "base/trace.hh"
 #include "debug/MinorMem.hh"
+#include "debug/LvpDebug.hh"
 
 namespace gem5
 {
@@ -31,10 +32,25 @@ bool LVPTClass::AddEntry(std::uint64_t aAddress, std::uint64_t aData)  //Rick, r
         this->entries[lIndex].valid = true;
     }
 
-    DPRINTF(MinorMem, "LVPT Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
+    DPRINTF(LvpDebug, "LVPT Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
                     lIndex, aAddress, this->entries[lIndex].data);
 
     return lOverwroteData;
+}
+
+bool LVPTClass::GetPrediction(std::uint64_t aAddress, std::uint64_t &aData)
+{
+    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
+    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+
+    aData = this->entries[lIndex].data;
+
+    return this->entries[lIndex].valid;
+}
+
+bool LVPTClass::IsPredictableLoad(MinorDynInstPtr inst)
+{
+    return inst->staticInst->isLoad() && !inst->staticInst->isMicroop();
 }
 
 /*ResetEverythingLogicThatllHaveToGoInExecute
