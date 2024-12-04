@@ -1,34 +1,71 @@
-#include "cpu/minor/CVU.hh"
+#include <cmath>
+#include "CVU.hh"
+#include "base/trace.hh"
+#include "debug/MinorMem.hh"
 
-CVU::CVU(size_t size) : maxSize(size) {}
+namespace gem5
+{
 
-//look for an entry
-bool CVU::lookup(uint32_t index, uint32_t &value) {
-    auto it = cvuTable.find(index);
-    if(it != cvuTable.end()) {
+namespace minor
+{
+
+CVUClass::CVUClass(const std::string &aName, int numEntries) :
+    Named(aName),
+    mIndexBits(static_cast<std::uint8_t>(log2(numEntries)))
+{
+    this->entries = new cvuEntryStruct[numEntries]();
+}
+
+bool CVUClass::AddEntry(std::uint64_t aAddress, std::uint64_t aData)
+{
+    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
+    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+
+    bool lOverwroteData = false;
+
+    if (this->entries[lIndex].data != aData)
+    {
+        lOverwroteData = this->entries[lIndex].valid;
+        this->entries[lIndex].data = aData;
+        this->entries[lIndex].address = aAddress;
+        this->entries[lIndex].valid = true;
+    }
+
+    DPRINTF(MinorMem, "CVU Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
+                    lIndex, aAddress, this->entries[lIndex].data);
+
+    return lOverwroteData;
+}
+
+bool CVUClass::CheckEntry(std::uint64_t aAddress, std::uint64_t &outData)
+{
+    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
+    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+
+    if (this->entries[lIndex].valid && this->entries[lIndex].address == aAddress)
+    {
+        outData = this->entries[lIndex].data;
+        DPRINTF(MinorMem, "CVU Hit Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
+                        lIndex, aAddress, outData);
         return true;
     }
+
+    DPRINTF(MinorMem, "CVU Miss Index: 0x%03lX for address: 0x%016lX\n", lIndex, aAddress);
     return false;
 }
 
-//insert an entry
-void CVU::insert(uint32_t index, uint32_t value) {
-    //check if the table size is at maxSize -> if it is need to evict something
-    evictIfFull();
-    cvuTable[index] = {index, value}; // push in
-}
+void CVUClass::InvalidateEntry(std::uint64_t aAddress)
+{
+    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
+    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
 
-//erase an entry
-void CVU::invalidate(uint32_t index) {
-    auto it = cvuTable.find(index);
-    if (it != cvuTable.end()) {
-        cvuTable.erase(it);
+    if (this->entries[lIndex].valid && this->entries[lIndex].address == aAddress)
+    {
+        this->entries[lIndex].valid = false;
+        DPRINTF(MinorMem, "CVU Invalidate Index: 0x%03lX for address: 0x%016lX\n", lIndex, aAddress);
     }
 }
 
-//evict from table
-void CVU::evictIfFull() {
-    if (cvuTable.size() >= maxSize) {
-        cvuTable.erase(cvuTable.begin()); //remove first entry for simplicity 
-    }
-}
+} // namespace minor
+
+} // namespace gem5

@@ -1,27 +1,44 @@
-#ifndef __CVU_HH__
-#define __CVU_HH__
+#ifndef CVU_HH
+#define CVU_HH
 
-#include <unordered_map>
-#include "base/named.hh"
+#include <cstdint>
+#include <string>
+#include "base/trace.hh"
 
-class CVU : public Named {
-private:
-    struct CVUEntry {
-       uint32_t index; // index coming from lvpt
-       uint32_t value; // value of the constant load
-    };
+namespace gem5
+{
 
-    std::unordered_map<uint32_t, CVUEntry> cvuTable; // the main cvu table
-    size_t maxSize; // max cvu size
-    void evictIfFull();
-public:
-    CVU(size_t size);
+namespace minor
+{
 
-    //function to check if value is in cvu table;
-    bool lookup(uint32_t index, uint32_t &value);
-    // insert a new constant value in cvu table;
-    void insertValue(uint32_t index, uint32_t value);
-    // invalidate or remove entry from table by its address
-    void invalidate(uint32_t index);
+// Entry structure for CVU
+struct cvuEntryStruct {
+    std::uint64_t address;  // Memory address
+    std::uint64_t data;     // Cached constant value
+    bool valid;             // Validity flag
 };
-#endif // __CVU_HH__
+
+class CVUClass : public Named
+{
+  public:
+    CVUClass(const std::string &aName, int numEntries);
+
+    // Add an entry to the CVU
+    bool AddEntry(std::uint64_t aAddress, std::uint64_t aData);
+
+    // Check if an entry exists for the given address
+    bool CheckEntry(std::uint64_t aAddress, std::uint64_t &outData);
+
+    // Invalidate an entry for the given address
+    void InvalidateEntry(std::uint64_t aAddress);
+
+  private:
+    cvuEntryStruct *entries;          // Array of CVU entries
+    std::uint8_t mIndexBits;          // Number of index bits
+};
+
+} // namespace minor
+
+} // namespace gem5
+
+#endif // CVU_HH
