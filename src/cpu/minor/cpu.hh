@@ -44,6 +44,7 @@
 #ifndef __CPU_MINOR_CPU_HH__
 #define __CPU_MINOR_CPU_HH__
 
+#include "LVPT.hh"
 #include "base/compiler.hh"
 #include "base/random.hh"
 #include "cpu/base.hh"
@@ -99,6 +100,8 @@ class MinorCPU : public BaseCPU
      *  you need a ThreadContext for *any* reason, use
      *  threads[threadId]->getTC() */
     std::vector<minor::MinorThread *> threads;
+
+    minor::LVPTClass lvpt;
 
   public:
     /** Provide a non-protected base class for Minor's Ports as derived
