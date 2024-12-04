@@ -50,6 +50,7 @@ namespace gem5
 MinorCPU::MinorCPU(const BaseMinorCPUParams &params) :
     BaseCPU(params),
     lvpt("LVPT", 1024),
+    cvu("CVU", 1024),
     threadPolicy(params.threadPolicy),
     stats(this)
 {
