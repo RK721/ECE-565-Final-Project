@@ -92,6 +92,9 @@ class Scoreboard : public Named
     /** Count of the number of results which can't be predicted */
     std::vector<Index> numUnpredictableResults;
 
+    /** Count of the number of results which can't be predicted */
+    std::vector<Index> numLoadResults;
+
     /** Index of the FU generating this result */
     std::vector<int> fuIndices;
     static constexpr int invalidFUIndex = -1;
@@ -120,6 +123,7 @@ class Scoreboard : public Named
         numRegs(vecPredRegOffset + reg_classes.at(VecPredRegClass).numRegs()),
         numResults(numRegs, 0),
         numUnpredictableResults(numRegs, 0),
+        numLoadResults(numRegs, 0),
         fuIndices(numRegs, invalidFUIndex),
         returnCycle(numRegs, Cycles(0)),
         writingInst(numRegs, 0)

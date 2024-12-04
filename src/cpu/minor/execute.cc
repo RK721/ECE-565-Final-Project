@@ -53,6 +53,7 @@
 #include "debug/MinorMem.hh"
 #include "debug/MinorTrace.hh"
 #include "debug/PCEvent.hh"
+#include "mem/packet_access.hh"
 
 namespace gem5
 {
@@ -375,9 +376,35 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         DPRINTF(MinorMem, "Memory response inst: %s addr: 0x%x size: %d\n",
             *inst, packet->getAddr(), packet->getSize());
 
-        if (is_load && packet->getSize() > 0) {
-            DPRINTF(MinorMem, "Memory data[0]: 0x%x\n",
-                static_cast<unsigned int>(packet->getConstPtr<uint8_t>()[0]));
+        if (is_load && packet->getSize() > 7) {
+
+            uint64_t packetDataLE = packet->getLE<uint64_t>();
+
+            DPRINTF(MinorMem, "Memory data LE[0-7]: 0x%016lX\n",
+                    packetDataLE); //Rick This is where the data will be written back to LVPT
+
+            DPRINTF(MinorMem, "Load response inst: %s addr: 0x%x size: %d\n",
+            *inst, packet->getAddr(), packet->getSize());
+
+
+            cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE);
+        }
+        else if (is_load && packet->getSize() > 3) {
+
+            uint32_t packetDataLE = packet->getLE<uint32_t>();
+
+            DPRINTF(MinorMem, "Memory data 32 bit LE[0-3]: 0x%016lX\n",
+                    packetDataLE); //Rick This is where the data will be written back to LVPT
+
+            DPRINTF(MinorMem, "Load response inst: %s addr: 0x%x size: %d\n",
+            *inst, packet->getAddr(), packet->getSize());
+
+            cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE);
+        }
+        else if (is_load)
+        {
+            DPRINTF(MinorMem, "Load response inst: %s addr: 0x%x size: %d\n",
+            *inst, packet->getAddr(), packet->getSize());
         }
 
         /* Complete the memory access instruction */
@@ -744,8 +771,8 @@ Execute::issue(ThreadID thread_id)
                             }
                             /* Also queue this instruction in the memory ref
                              *  queue to ensure in-order issue to the LSQ */
-                            DPRINTF(MinorExecute, "Pushing mem inst: %s\n",
-                                *inst);
+                            DPRINTF(MinorExecute, "Pushing mem inst: %s extra_assumed_lat: %d\n",
+                                *inst, extra_assumed_lat);
                             thread.inFUMemInsts->push(fu_inst);
                         }
 
@@ -757,6 +784,11 @@ Execute::issue(ThreadID thread_id)
 
                         /* Mark the destinations for this instruction as
                          *  busy */
+                        if (issued_mem_ref) {
+                            DPRINTF(MinorExecute, "Mem inst: %s fu->description.opLat: %d extra_dest_retire_lat: %d extra_assumed_lat: %d\n",
+                                    *inst, fu->description.opLat, extra_dest_retire_lat, extra_assumed_lat);
+                        }
+
                         scoreboard[thread_id].markupInstDests(inst, cpu.curCycle() +
                             fu->description.opLat +
                             extra_dest_retire_lat +
@@ -1471,8 +1503,9 @@ Execute::evaluate()
                     branch = BranchData::bubble();
                 } else if (commit_info.drainState == DrainAllInsts) {
                     /* Kill all instructions */
-                    while (getInput(commit_tid))
+                    while (getInput(commit_tid)) //This Drains the input buffer
                         popInput(commit_tid);
+                        // Commit with discard set true, therefore just popping all instructions at the head of their FU pipelines
                     commit(commit_tid, false, true, branch);
                 }
             } else {

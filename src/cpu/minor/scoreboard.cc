@@ -121,6 +121,12 @@ Scoreboard::markupInstDests(MinorDynInstPtr inst, Cycles retire_time,
             inst->flatDestRegIdx[dest_index] = reg;
 
             numResults[index]++;
+
+            if (staticInst->isLoad())
+            {
+                numLoadResults[index]++;
+            }
+
             returnCycle[index] = retire_time;
             /* We should be able to rely on only being given accending
              *  execSeqNums, but sanity check */
@@ -130,8 +136,8 @@ Scoreboard::markupInstDests(MinorDynInstPtr inst, Cycles retire_time,
             }
 
             DPRINTF(MinorScoreboard, "Marking up inst: %s"
-                " regIndex: %d final numResults: %d returnCycle: %d\n",
-                *inst, index, numResults[index], returnCycle[index]);
+                " regIndex: %d final numResults: %d returnCycle: %d mark_unpredictable: %d\n",
+                *inst, index, numResults[index], returnCycle[index], mark_unpredictable);
         } else {
             /* Use an invalid ID to mark invalid/untracked dests */
             inst->flatDestRegIdx[dest_index] = RegId();
@@ -189,6 +195,11 @@ Scoreboard::clearInstDests(MinorDynInstPtr inst, bool clear_unpredictable)
                 numUnpredictableResults[index] --;
 
             numResults[index] --;
+
+            if (staticInst->isLoad())
+            {
+                numLoadResults[index]--;
+            }
 
             if (numResults[index] == 0) {
                 returnCycle[index] = Cycles(0);
@@ -257,6 +268,16 @@ Scoreboard::canInstIssue(MinorDynInstPtr inst,
             if (returnCycle[index] > (now + relative_latency) ||
                 numUnpredictableResults[index] != 0)
             {
+                DPRINTF(MinorScoreboard, "Can't issue inst: %s"
+                    " returnCycle[index]: %d now: %d relative_latency: %d numUnpredictableResults[index]: %d\n",
+                    *inst, returnCycle[index], now, relative_latency, numUnpredictableResults[index]);
+                ret = false;
+            }
+            else if (numLoadResults[index] != 0)
+            {
+                DPRINTF(MinorScoreboard, "Stalling issue for load result: %s"
+                    " returnCycle[index]: %d now: %d relative_latency: %d numLoadResults[index]: %d\n",
+                    *inst, returnCycle[index], now, relative_latency, numLoadResults[index]);
                 ret = false;
             }
         }
