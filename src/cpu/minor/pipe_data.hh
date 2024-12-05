@@ -88,6 +88,8 @@ class BranchData /* : public ReportIF, public BubbleIF */
          *  back to correct stream.  If the target is wrong, use
          *  BadlyPredictedBranchTarget */
         BadlyPredictedBranch,
+        /* Incorrectly Predicted Load, reset */
+        BadLVP,
         /* Suspend fetching for this thread (inst->id.threadId).
          * This will be woken up by another stream changing branch so
          * count it as stream changing itself and expect pc to be the PC

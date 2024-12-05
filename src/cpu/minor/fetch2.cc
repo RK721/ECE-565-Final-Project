@@ -48,6 +48,7 @@
 #include "debug/Branch.hh"
 #include "debug/Fetch.hh"
 #include "debug/MinorTrace.hh"
+#include "debug/LvpDebug.hh"
 
 namespace gem5
 {
@@ -138,6 +139,9 @@ Fetch2::updateBranchPrediction(const BranchData &branch)
     switch (branch.reason) {
       case BranchData::NoBranch:
         /* No data to update */
+        break;
+      case BranchData::BadLVP:
+        /* Not a branch, don't update branch pred */
         break;
       case BranchData::Interrupt:
         /* Never try to predict interrupts */
@@ -455,6 +459,45 @@ Fetch2::evaluate()
                     /* Predict any branches and issue a branch if
                      *  necessary */
                     predictBranch(dyn_inst, prediction);
+
+                    if (LVPTClass::IsPredictableLoad(dyn_inst))
+                    {
+                        bool predict = (dyn_inst->pc->instAddr() % 8) == 0; //LCT: Set predict = whether or not we want to predict by passing dyn_inst->pc->instAddr()
+
+                        if(predict)
+                        {
+                            uint64_t predictionValue = 0;
+                            bool isValid = cpu.lvpt.GetPrediction(dyn_inst->pc->instAddr(), predictionValue);
+
+                            if (isValid)
+                            {
+                                dyn_inst->staticInst->setIsLoadPredicted(true);
+                                dyn_inst->staticInst->setLoadPrediction(predictionValue);
+
+                                DPRINTF(LvpDebug, "Predicting inst: %s value: 0x%016lX\n",
+                                    *dyn_inst, predictionValue);
+                            }
+                            else
+                            {
+                                DPRINTF(LvpDebug, "Tried to predict but invalid inst: %s\n",
+                                    *dyn_inst);
+                                dyn_inst->staticInst->setIsLoadPredicted(false);
+                            }
+                        }
+                        else
+                        {
+                            DPRINTF(LvpDebug, "Not predicting inst: %s\n",
+                                    *dyn_inst);
+                            dyn_inst->staticInst->setIsLoadPredicted(false);
+                        }
+                    }
+                    else
+                    {
+                        DPRINTF(LvpDebug, "Not predicting inst: %s\n",
+                                    *dyn_inst);
+                        dyn_inst->staticInst->setIsLoadPredicted(false);
+                    }
+
                 } else {
                     DPRINTF(Fetch, "Inst not ready yet\n");
                 }

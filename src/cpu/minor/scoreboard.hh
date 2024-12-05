@@ -95,6 +95,9 @@ class Scoreboard : public Named
     /** Count of the number of results which can't be predicted */
     std::vector<Index> numLoadResults;
 
+    /** Increment this value if load is predicted */
+    std::vector<Index> loadResultPredicted;
+
     /** Index of the FU generating this result */
     std::vector<int> fuIndices;
     static constexpr int invalidFUIndex = -1;
@@ -124,6 +127,7 @@ class Scoreboard : public Named
         numResults(numRegs, 0),
         numUnpredictableResults(numRegs, 0),
         numLoadResults(numRegs, 0),
+        loadResultPredicted(numRegs, 0),
         fuIndices(numRegs, invalidFUIndex),
         returnCycle(numRegs, Cycles(0)),
         writingInst(numRegs, 0)
