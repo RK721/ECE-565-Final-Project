@@ -26,8 +26,8 @@ class LVPTClass : public Named
   private:
     struct lvptEntryStruct
     {
-      std::uint64_t data;
-      bool valid;
+      std::uint64_t data = 0;
+      bool valid = false;
     };
 
     lvptEntryStruct* entries;

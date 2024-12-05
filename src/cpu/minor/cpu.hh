@@ -44,6 +44,7 @@
 #ifndef __CPU_MINOR_CPU_HH__
 #define __CPU_MINOR_CPU_HH__
 
+#include "LCT.hh"
 #include "LVPT.hh"
 #include "base/compiler.hh"
 #include "base/random.hh"
@@ -102,6 +103,8 @@ class MinorCPU : public BaseCPU
     std::vector<minor::MinorThread *> threads;
 
     minor::LVPTClass lvpt;
+
+    minor::LCTClass lct;
 
   public:
     /** Provide a non-protected base class for Minor's Ports as derived

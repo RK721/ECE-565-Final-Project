@@ -1486,6 +1486,8 @@ LSQ::step()
 LSQ::LSQRequestPtr
 LSQ::findResponse(MinorDynInstPtr inst)
 {
+    //return a response immediately for CVU predictions
+
     LSQ::LSQRequestPtr ret = NULL;
 
     if (!transfers.empty()) {
