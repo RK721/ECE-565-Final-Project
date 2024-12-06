@@ -422,7 +422,11 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             DPRINTF(LvpDebug, "Load response inst: %s addr: 0x%x size: %d\n",
                     *inst, packet->getAddr(), packet->getSize());
 
-            cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE);
+            cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE));
+
+            //CVU: If CVU was wrong, make sure to degrade LCT entry
+
+            //CVU: Check returned value against CVU for constant predictions
 
             if (inst->staticInst->getIsLoadPredicted() && (packetDataLE != inst->staticInst->getLoadPrediction()))
             {
@@ -431,8 +435,6 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 
                 DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
                         *inst);
-
-                //LCT: Update Bad Prediction
                 
                 inst->staticInst->setBadLoadPrediction(true);
             }
@@ -443,8 +445,6 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
                 DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
                         *inst);
-
-                //LCT: Update Good Prediction
 
                 inst->staticInst->setBadLoadPrediction(false);
             }

@@ -44,6 +44,7 @@
 #ifndef __CPU_MINOR_CPU_HH__
 #define __CPU_MINOR_CPU_HH__
 
+#include "LCT.hh"
 #include "LVPT.hh"
 #include "CVU.hh"
 #include "base/compiler.hh"
@@ -103,7 +104,10 @@ class MinorCPU : public BaseCPU
     std::vector<minor::MinorThread *> threads;
 
     minor::LVPTClass lvpt;
+
+    minor::LCTClass lct;
     minor::CVUClass cvu;
+
   public:
     /** Provide a non-protected base class for Minor's Ports as derived
      *  classes are created by Fetch1 and Execute */

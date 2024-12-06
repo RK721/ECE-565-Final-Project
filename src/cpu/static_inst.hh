@@ -112,6 +112,10 @@ class StaticInst : public RefCounted, public StaticInstFlags
     uint8_t _numDestRegs = 0;
 
     bool isLoadPredicted = false;
+<<<<<<< HEAD
+=======
+    bool isLoadPredictedConstant = false;
+>>>>>>> master
     bool badLoadPrediction = false;
 
     uint64_t loadPrediction = 0;
@@ -139,6 +143,12 @@ class StaticInst : public RefCounted, public StaticInstFlags
     bool getIsLoadPredicted() const { return isLoadPredicted; }
     void setIsLoadPredicted(bool val) { isLoadPredicted = val; }
 
+<<<<<<< HEAD
+=======
+    bool getIsLoadPredictedConstant() const { return isLoadPredictedConstant; }
+    void setIsLoadPredictedConstant(bool val) { isLoadPredictedConstant = val; }
+
+>>>>>>> master
     uint64_t getLoadPrediction() const { return loadPrediction; }
     void setLoadPrediction(uint64_t val) { loadPrediction = val; }
 

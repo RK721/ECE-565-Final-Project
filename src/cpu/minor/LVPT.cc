@@ -25,15 +25,17 @@ bool LVPTClass::AddEntry(std::uint64_t aAddress, std::uint64_t aData)  //Rick, r
 
     bool lOverwroteData = false;
 
+    std::uint64_t lOldData = this->entries[lIndex].data;
+
     if (this->entries[lIndex].data != aData)
     {
-        lOverwroteData = this->entries[lIndex].valid;
+        lOverwroteData = true;
         this->entries[lIndex].data = aData;
         this->entries[lIndex].valid = true;
     }
 
-    DPRINTF(LvpDebug, "LVPT Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
-                    lIndex, aAddress, this->entries[lIndex].data);
+    DPRINTF(LvpDebug, "LVPT Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX Old Data: 0x%016lX\n",
+                    lIndex, aAddress, this->entries[lIndex].data, lOldData);
 
     return lOverwroteData;
 }
