@@ -422,7 +422,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             DPRINTF(LvpDebug, "Load response inst: %s addr: 0x%x size: %d\n",
                     *inst, packet->getAddr(), packet->getSize());
 
-            cpu.lct.adjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE));
+            cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE));
 
             //CVU: If CVU was wrong, make sure to degrade LCT entry
 

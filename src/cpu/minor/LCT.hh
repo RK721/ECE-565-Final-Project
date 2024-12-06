@@ -13,7 +13,7 @@ namespace minor
 class LCTClass : public Named
 {
     public:
-        LCTClass(const std::string &aName, int numEntries, int counterSize);
+        LCTClass(const std::string &aName, int numEntries, int aCounterSize);
         
         enum counterState {
             NOPRED1,
@@ -22,7 +22,7 @@ class LCTClass : public Named
             CONSTANT
         };
 
-        bool adjustPrediction(std::uint64_t aAddress, bool predCorrect);
+        bool AdjustPrediction(std::uint64_t aAddress, bool predCorrect);
         bool GetPrediction(std::uint64_t aAddress, bool& aIsConstant);
         std::string stateToString(counterState state);
 
@@ -30,14 +30,13 @@ class LCTClass : public Named
     private:
         struct lctEntryStruct
         {
-            int counterSize;
-            counterState state;
-            bool valid;
+            counterState state = LCTClass::NOPRED1;
+            bool valid = false;
         };
     
-
         lctEntryStruct* entries;
         std::uint8_t mIndexBits;
+        int counterSize;
 
 };
 
