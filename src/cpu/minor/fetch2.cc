@@ -462,19 +462,6 @@ Fetch2::evaluate()
 
                     if (LVPTClass::IsPredictableLoad(dyn_inst))
                     {
-<<<<<<< HEAD
-                        bool predict = (dyn_inst->pc->instAddr() % 8) == 0; //LCT: Set predict = whether or not we want to predict by passing dyn_inst->pc->instAddr()
-
-                        if(predict)
-                        {
-                            uint64_t predictionValue = 0;
-                            bool isValid = cpu.lvpt.GetPrediction(dyn_inst->pc->instAddr(), predictionValue);
-
-                            if (isValid)
-                            {
-                                dyn_inst->staticInst->setIsLoadPredicted(true);
-                                dyn_inst->staticInst->setLoadPrediction(predictionValue);
-=======
                         bool isConstant = false;
                         uint64_t predictionValue = 0;
 
@@ -500,7 +487,6 @@ Fetch2::evaluate()
                                 {
                                     dyn_inst->staticInst->setIsLoadPredictedConstant(false);
                                 }
->>>>>>> master
 
                                 DPRINTF(LvpDebug, "Predicting inst: %s value: 0x%016lX\n",
                                     *dyn_inst, predictionValue);
