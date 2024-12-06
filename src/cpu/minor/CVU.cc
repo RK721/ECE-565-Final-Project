@@ -1,7 +1,5 @@
+#include "cpu/minor/CVU.hh"
 #include <cmath>
-#include "CVU.hh"
-#include "base/trace.hh"
-#include "debug/MinorMem.hh"
 
 namespace gem5
 {
@@ -9,60 +7,63 @@ namespace gem5
 namespace minor
 {
 
-CVUClass::CVUClass(const std::string &aName, int numEntries) :
-    Named(aName),
-    mIndexBits(static_cast<std::uint8_t>(log2(numEntries)))
+CVUClass::CVUClass(const std::string &aName, int numEntries)
+    : Named(aName),
+      entries(numEntries),          // Initialize entries array with size
+      indexMask(numEntries - 1)     // Mask for direct-mapped indexing
 {
-    this->entries = new cvuEntryStruct[numEntries]();
+    // Ensure all entries are invalid at the start
+    for (auto &entry : entries) {
+        entry.valid = false;
+    }
+}
+
+CVUClass::~CVUClass()
+{
+    // No dynamic memory to clean up, vector handles itself
 }
 
 bool CVUClass::AddEntry(std::uint64_t aAddress, std::uint64_t aData)
 {
-    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
-    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+    std::uint64_t index = aAddress & indexMask;
 
-    bool lOverwroteData = false;
-
-    if (this->entries[lIndex].data != aData)
-    {
-        lOverwroteData = this->entries[lIndex].valid;
-        this->entries[lIndex].data = aData;
-        this->entries[lIndex].address = aAddress;
-        this->entries[lIndex].valid = true;
+    if (entries[index].valid && entries[index].address != aAddress) {
+        DPRINTF(MinorMem, "CVU conflict: Overwriting entry at index %lu\n", index);
     }
 
-    DPRINTF(MinorMem, "CVU Updated Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
-                    lIndex, aAddress, this->entries[lIndex].data);
+    entries[index].address = aAddress;
+    entries[index].data = aData;
+    entries[index].valid = true;
 
-    return lOverwroteData;
+    DPRINTF(MinorMem, "CVU AddEntry: Address=0x%016lX, Data=0x%016lX, Index=%lu\n",
+            aAddress, aData, index);
+
+    return true;
 }
 
-bool CVUClass::CheckEntry(std::uint64_t aAddress, std::uint64_t &outData)
+bool CVUClass::CheckEntry(std::uint64_t aAddress, std::uint64_t &outData) const
 {
-    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
-    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+    std::uint64_t index = aAddress & indexMask;
 
-    if (this->entries[lIndex].valid && this->entries[lIndex].address == aAddress)
-    {
-        outData = this->entries[lIndex].data;
-        DPRINTF(MinorMem, "CVU Hit Index: 0x%03lX for address: 0x%016lX with value: 0x%016lX\n",
-                        lIndex, aAddress, outData);
+    if (entries[index].valid && entries[index].address == aAddress) {
+        outData = entries[index].data;
+        DPRINTF(MinorMem, "CVU CheckEntry hit: Address=0x%016lX, Data=0x%016lX, Index=%lu\n",
+                aAddress, outData, index);
         return true;
     }
 
-    DPRINTF(MinorMem, "CVU Miss Index: 0x%03lX for address: 0x%016lX\n", lIndex, aAddress);
+    DPRINTF(MinorMem, "CVU CheckEntry miss: Address=0x%016lX, Index=%lu\n", aAddress, index);
     return false;
 }
 
 void CVUClass::InvalidateEntry(std::uint64_t aAddress)
 {
-    std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
-    std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
+    std::uint64_t index = aAddress & indexMask;
 
-    if (this->entries[lIndex].valid && this->entries[lIndex].address == aAddress)
-    {
-        this->entries[lIndex].valid = false;
-        DPRINTF(MinorMem, "CVU Invalidate Index: 0x%03lX for address: 0x%016lX\n", lIndex, aAddress);
+    if (entries[index].valid && entries[index].address == aAddress) {
+        entries[index].valid = false;
+        DPRINTF(MinorMem, "CVU InvalidateEntry: Address=0x%016lX, Index=%lu\n",
+                aAddress, index);
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 #include "base/trace.hh"
 
 namespace gem5
@@ -22,19 +23,20 @@ class CVUClass : public Named
 {
   public:
     CVUClass(const std::string &aName, int numEntries);
+    ~CVUClass();
 
     // Add an entry to the CVU
     bool AddEntry(std::uint64_t aAddress, std::uint64_t aData);
 
     // Check if an entry exists for the given address
-    bool CheckEntry(std::uint64_t aAddress, std::uint64_t &outData);
+    bool CheckEntry(std::uint64_t aAddress, std::uint64_t &outData) const;
 
     // Invalidate an entry for the given address
     void InvalidateEntry(std::uint64_t aAddress);
 
   private:
-    cvuEntryStruct *entries;          // Array of CVU entries
-    std::uint8_t mIndexBits;          // Number of index bits
+    std::vector<cvuEntryStruct> entries; // Array of CVU entries
+    std::uint64_t indexMask;             // Mask for indexing
 };
 
 } // namespace minor
