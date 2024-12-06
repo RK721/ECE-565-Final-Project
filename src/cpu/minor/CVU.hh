@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <unordered_map>
 #include "base/trace.hh"
 
 namespace gem5
@@ -12,17 +12,10 @@ namespace gem5
 namespace minor
 {
 
-// Entry structure for CVU
-struct cvuEntryStruct {
-    std::uint64_t address;  // Memory address
-    std::uint64_t data;     // Cached constant value
-    bool valid;             // Validity flag
-};
-
 class CVUClass : public Named
 {
   public:
-    CVUClass(const std::string &aName, int numEntries);
+    CVUClass(const std::string &aName);
     ~CVUClass();
 
     // Add an entry to the CVU
@@ -31,12 +24,11 @@ class CVUClass : public Named
     // Check if an entry exists for the given address
     bool CheckEntry(std::uint64_t aAddress, std::uint64_t &outData) const;
 
-    // Invalidate an entry for the given address
-    void InvalidateEntry(std::uint64_t aAddress);
+    // Remove an entry for the given address
+    void RemoveEntry(std::uint64_t aAddress);
 
   private:
-    std::vector<cvuEntryStruct> entries; // Array of CVU entries
-    std::uint64_t indexMask;             // Mask for indexing
+    std::unordered_map<std::uint64_t, std::uint64_t> entries; // Address to data mapping
 };
 
 } // namespace minor
