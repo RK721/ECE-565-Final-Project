@@ -26,18 +26,23 @@ bool CVUClass::AddEntry(std::uint64_t aAddress, std::uint64_t aData)
     return true;
 }
 
-bool CVUClass::CheckEntry(std::uint64_t aAddress, std::uint64_t &outData) const
+bool CVUClass::CheckEntry(std::uint64_t aAddress, std::uint64_t predictedValue)
 {
     auto it = entries.find(aAddress);
 
     if (it != entries.end()) {
-        outData = it->second;
-        DPRINTF(LvpDebug, "CVU CheckEntry hit: Address=0x%016lX, Data=0x%016lX\n",
-                aAddress, outData);
-        return true;
+        std::uint64_t actualValue = it->second;
+
+        DPRINTF(LvpDebug, "CVU CheckEntry: Address=0x%016lX, PredictedValue=0x%016lX, ActualValue=0x%016lX\n",
+                aAddress, predictedValue, actualValue);
+
+        // Return true if the prediction matches the actual value
+        return predictedValue == actualValue;
     }
 
     DPRINTF(LvpDebug, "CVU CheckEntry miss: Address=0x%016lX\n", aAddress);
+
+    // Return false if no entry exists
     return false;
 }
 
