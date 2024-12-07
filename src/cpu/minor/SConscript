@@ -48,6 +48,7 @@ if env['CONF']['TARGET_ISA'] != 'null':
 
     Source('activity.cc')
     Source('cpu.cc')
+    Source('CVU.cc')
     Source('decode.cc')
     Source('dyn_inst.cc')
     Source('execute.cc')

@@ -30,11 +30,12 @@ bool LCTClass::GetPrediction(std::uint64_t aAddress, bool& aIsConstant) {
     return (this->entries[lIndex].valid) && ((CONSTANT == this->entries[lIndex].state) || (PRED == this->entries[lIndex].state));
 }
 
-bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect) {
+bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect, bool& aDowngradedFromConstant) {
     std::uint64_t lIndexMask = pow(2, mIndexBits) - 1;
     std::uint64_t lIndex = (aAddress >> 2) & lIndexMask;
 
     LCTClass::counterState nextPred = counterState::NOPRED1;
+    aDowngradedFromConstant = false;
 
     this->entries[lIndex].valid = true; // this address has been seen
 
@@ -43,9 +44,14 @@ bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect) {
     if (this->counterSize == 1) {
         if (predCorrect) { // correct prediction
             switch(this->entries[lIndex].state) {
-                case NOPRED1:   nextPred = CONSTANT;
-                                constantPred = true;
-                    break;
+
+                case NOPRED1:   
+                {
+                    nextPred = CONSTANT;
+                    constantPred = true;
+                }
+                break;
+
                 case CONSTANT:  nextPred = CONSTANT;
                     break;
                 default:        nextPred = this->entries[lIndex].state;
@@ -56,8 +62,13 @@ bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect) {
             switch(this->entries[lIndex].state) {
                 case NOPRED1:   nextPred = NOPRED1; 
                     break;
-                case CONSTANT:  nextPred = NOPRED1;
-                    break;
+                case CONSTANT:
+                {
+                    nextPred = NOPRED1;
+                    aDowngradedFromConstant = true;
+                }
+                break;
+
                 default:        nextPred = this->entries[lIndex].state;
                     break;
             }
@@ -69,9 +80,13 @@ bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect) {
                     break;
                 case NOPRED2:   nextPred = PRED;
                     break;
-                case PRED:      nextPred = CONSTANT;
-                                constantPred = true;
-                    break;
+                case PRED:
+                {
+                    nextPred = CONSTANT;
+                    constantPred = true;
+                }      
+                break;
+                
                 case CONSTANT:  nextPred = CONSTANT;
                     break;
                 default:        nextPred = this->entries[lIndex].state;
@@ -86,8 +101,14 @@ bool LCTClass::AdjustPrediction(std::uint64_t aAddress, bool predCorrect) {
                     break;
                 case PRED:      nextPred = NOPRED2;
                     break;
-                case CONSTANT:  nextPred = PRED;
-                    break;
+
+                case CONSTANT:
+                {
+                    nextPred = PRED;
+                    aDowngradedFromConstant = true;
+                }  
+                break;
+
                 default:        nextPred = this->entries[lIndex].state;
                     break;
             }

@@ -22,7 +22,7 @@ class LCTClass : public Named
             CONSTANT
         };
 
-        bool AdjustPrediction(std::uint64_t aAddress, bool predCorrect);
+        bool AdjustPrediction(std::uint64_t aAddress, bool predCorrect, bool& aDowngradedFromConstant);
         bool GetPrediction(std::uint64_t aAddress, bool& aIsConstant);
         std::string stateToString(counterState state);
 

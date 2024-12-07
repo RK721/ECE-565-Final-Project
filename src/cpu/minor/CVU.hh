@@ -1,6 +1,7 @@
 #ifndef CVU_HH
 #define CVU_HH
 
+#include "base/named.hh"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
