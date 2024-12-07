@@ -432,7 +432,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
             if (upgradedToConstant)
             {
-                cpu.cvu.AddEntry()
+                cpu.cvu.AddEntry(inst->pc->instAddr(), packetDataLE);
             }
 
             if (downgradedFromConstant)
@@ -440,7 +440,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 cpu.cvu.RemoveEntry(packet->getAddr());
             }
 
-            if (dyn_ininstst->staticInst->setIsLoadPredictedConstant(true))
+            if (inst->staticInst->setIsLoadPredictedConstant(true))
             {
                 bool cvuCorrect = cpu.cvu.CheckEntry(packet->getAddr(), inst->staticInst->getLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
             }
