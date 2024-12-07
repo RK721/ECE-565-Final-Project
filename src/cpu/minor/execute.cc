@@ -414,7 +414,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         DPRINTF(MinorMem, "Memory response inst: %s addr: 0x%x size: %d\n",
             *inst, packet->getAddr(), packet->getSize());
 
-        if (isStore)
+        if (is_store)
         {
             cpu.cvu.RemoveEntry(packet->getAddr());
         }
