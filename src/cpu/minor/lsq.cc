@@ -292,7 +292,19 @@ LSQ::SingleDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
         setState(Translated);
         makePacket();
     }
-    port.tryToSendToTransfers(this);
+    std::printf("LSQHere 1");
+    // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
+    if(inst->GetIsLoadPredictedConstant())
+    {
+        std::printf("Shouldn't Get Here 3");
+        inst->SetTranslatedLoadAddr(packet->getAddr());
+        inst->SetPacket(packet);
+        port.tryToSendToTransfers(this);
+    }
+    else
+    {
+        port.tryToSendToTransfers(this);
+    }
 
     /* Let's try and wake up the processor for the next cycle */
     port.cpu.wakeupOnEvent(Pipeline::ExecuteStageId);
@@ -382,7 +394,19 @@ LSQ::SplitDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
     } else if (numTranslatedFragments == numFragments) {
         makeFragmentPackets();
         setState(Translated);
-        port.tryToSendToTransfers(this);
+        std::printf("LSQHere 2");
+        // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
+        if(inst->GetIsLoadPredictedConstant())
+        {
+            std::printf("Shouldn't Get Here 3");
+            inst->SetTranslatedLoadAddr(packet->getAddr());
+            inst->SetPacket(packet);
+            port.tryToSendToTransfers(this);
+        }
+        else
+        {
+            port.tryToSendToTransfers(this);
+        }
     } else {
         /* Avoid calling translateTiming from within ::finish */
         assert(!translationEvent.scheduled());
@@ -1480,6 +1504,9 @@ LSQ::step()
     if (!requests.empty())
         tryToSendToTransfers(requests.front());
 
+    std::printf("Maybe This is the issue");
+    removeSkippedResponses();
+
     storeBuffer.step();
 }
 
@@ -1518,6 +1545,17 @@ LSQ::findResponse(MinorDynInstPtr inst)
     }
 
     return ret;
+}
+
+void LSQ::removeSkippedResponses()
+{
+    LSQRequestPtr request = transfers.front();
+
+    if (request->inst->GetIsLoadPredictedConstant())
+    {
+        std::printf("Shouldn't Get Here 4");
+        popResponse(request);
+    }
 }
 
 void

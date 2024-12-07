@@ -111,12 +111,6 @@ class StaticInst : public RefCounted, public StaticInstFlags
     /// See numDestRegs().
     uint8_t _numDestRegs = 0;
 
-    bool isLoadPredicted = false;
-    bool isLoadPredictedConstant = false;
-    bool badLoadPrediction = false;
-
-    uint64_t loadPrediction = 0;
-
     std::array<uint8_t, MiscRegClass + 1> _numTypedDestRegs = {};
 
   public:
@@ -136,18 +130,6 @@ class StaticInst : public RefCounted, public StaticInstFlags
         return _numTypedDestRegs[type];
     }
     //@}
-
-    bool getIsLoadPredicted() const { return isLoadPredicted; }
-    void setIsLoadPredicted(bool val) { isLoadPredicted = val; }
-
-    bool getIsLoadPredictedConstant() const { return isLoadPredictedConstant; }
-    void setIsLoadPredictedConstant(bool val) { isLoadPredictedConstant = val; }
-
-    uint64_t getLoadPrediction() const { return loadPrediction; }
-    void setLoadPrediction(uint64_t val) { loadPrediction = val; }
-
-    bool getBadLoadPrediction() const { return badLoadPrediction; }
-    void setBadLoadPrediction(bool val) { badLoadPrediction = val; }
 
     /// @name Flag accessors.
     /// These functions are used to access the values of the various

@@ -90,6 +90,8 @@ class BranchData /* : public ReportIF, public BubbleIF */
         BadlyPredictedBranch,
         /* Incorrectly Predicted Load, reset */
         BadLVP,
+        /* Incorrectly Predicted Constant Load, reset */
+        BadConstantLVP,
         /* Suspend fetching for this thread (inst->id.threadId).
          * This will be woken up by another stream changing branch so
          * count it as stream changing itself and expect pc to be the PC

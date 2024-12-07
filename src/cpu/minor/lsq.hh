@@ -675,6 +675,8 @@ class LSQ : public Named
      *  popResponse is called */
     LSQRequestPtr findResponse(MinorDynInstPtr inst);
 
+    void removeSkippedResponses();
+
     /** Sanity check and pop the head response */
     void popResponse(LSQRequestPtr response);
 

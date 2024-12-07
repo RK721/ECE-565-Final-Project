@@ -55,6 +55,7 @@
 #include "debug/LvpDebug.hh"
 #include "debug/PCEvent.hh"
 #include "mem/packet_access.hh"
+#include <stdio.h>
 
 namespace gem5
 {
@@ -290,12 +291,24 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
             inst->pc->instAddr(), target->instAddr(), *inst);
 
         reason = BranchData::UnpredictedBranch;
-    } else if (inst->staticInst->isLoad() && inst->staticInst->getBadLoadPrediction()) {
-        reason = BranchData::BadLVP;
-        target->setPC(inst->pc->instAddr() + 4);
+    } else if (LVPTClass::IsPredictableLoad(inst) && inst->GetBadLoadPrediction()) {
+        if(inst->GetBadConstantLoadPrediction())
+        {
+            std::printf("Here1");
+            reason = BranchData::BadConstantLVP;
+            target->setPC(inst->pc->instAddr());
 
-        DPRINTF(LvpDebug, "Bad Load Prediction 0x%x setting pc to 0x%x inst: %s\n",
-            inst->pc->instAddr(), target->instAddr(), *inst);
+            DPRINTF(LvpDebug, "Bad Constant Load Prediction 0x%x setting pc to 0x%x inst: %s\n",
+                inst->pc->instAddr(), target->instAddr(), *inst);
+        }
+        else
+        {
+            reason = BranchData::BadLVP;
+            target->setPC(inst->pc->instAddr() + 4);
+
+            DPRINTF(LvpDebug, "Bad Load Prediction 0x%x setting pc to 0x%x inst: %s\n",
+                inst->pc->instAddr(), target->instAddr(), *inst);
+        }
     } else {
         /* No branch at all */
         reason = BranchData::NoBranch;
@@ -435,35 +448,32 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 cpu.cvu.AddEntry(inst->pc->instAddr(), packetDataLE);
             }
 
-            if (downgradedFromConstant)
+            if (downgradedFromConstant) // Really this should never happen here, as constants get handled elsewhere
             {
                 cpu.cvu.RemoveEntry(packet->getAddr());
             }
 
-            if (inst->staticInst->getIsLoadPredictedConstant())
-            {
-                bool cvuCorrect = cpu.cvu.CheckEntry(packet->getAddr(), inst->staticInst->getLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
-            }
-
-            if (inst->staticInst->getIsLoadPredicted() && (packetDataLE != inst->staticInst->getLoadPrediction()))
+            if (inst->GetIsLoadPredicted() && (packetDataLE != inst->GetLoadPrediction()))
             {
                 DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
-                    packetDataLE, inst->staticInst->getLoadPrediction()); 
+                    packetDataLE, inst->GetLoadPrediction()); 
                 
                 DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
                         *inst);
                 
-                inst->staticInst->setBadLoadPrediction(true);
+                inst->SetBadLoadPrediction(true);
+                inst->SetBadConstantLoadPrediction(false);
             }
-            else if (inst->staticInst->getIsLoadPredicted())
+            else if (inst->GetIsLoadPredicted())
             {
                 DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
-                    packetDataLE, inst->staticInst->getLoadPrediction());
+                    packetDataLE, inst->GetLoadPrediction());
 
                 DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
                         *inst);
 
-                inst->staticInst->setBadLoadPrediction(false);
+                inst->SetBadLoadPrediction(false);
+                inst->SetBadConstantLoadPrediction(false);
             }
             else
             {
@@ -508,6 +518,106 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
     /* Generate output to account for branches */
     tryToBranch(inst, fault, branch);
+}
+
+bool
+Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
+    BranchData &branch, Fault &fault)
+{
+    std::printf("Shouldn't Get Here 1");
+    bool cvuCorrect = true;
+
+    ThreadID thread_id = inst->id.threadId;
+    ThreadContext *thread = cpu.getContext(thread_id);
+
+    ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
+
+    bool is_load = inst->staticInst->isLoad();
+    assert(is_load);
+
+    /* If true, the trace's predicate value will be taken from the exec
+     *  context predicate, otherwise, it will be set to false */
+    bool use_context_predicate = true;
+
+    if (inst->translationFault != NoFault) {
+        /* Invoke memory faults. */
+        DPRINTF(MinorMem, "Completing fault from DTLB access: %s\n",
+            inst->translationFault->name());
+
+        if (inst->staticInst->isPrefetch()) {
+            DPRINTF(MinorMem, "Not taking fault on prefetch: %s\n",
+                inst->translationFault->name());
+
+            /* Don't assign to fault */
+        } else {
+            /* Take the fault raised during the TLB/memory access */
+            fault = inst->translationFault;
+
+            fault->invoke(thread, inst->staticInst);
+        }
+    }else if (is_load) {
+
+        DPRINTF(MinorMem, "Fake Memory response inst: %s addr: 0x%x\n",
+            *inst, inst->GetTranslatedLoadAddr());
+        
+        if (LVPTClass::IsPredictableLoad(inst)) {
+
+            if (inst->GetIsLoadPredictedConstant())
+            {
+                cvuCorrect = cpu.cvu.CheckEntry(inst->GetTranslatedLoadAddr(), inst->GetLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
+            }
+
+            bool downgradedFromConstant = false;
+            //This really only exists as a throwaway bool, if the cvu is wrong
+            //we know we're going to degrade the prediction and remove the CVU entry
+            if(!cvuCorrect)
+            {
+                // Bad Constant Prediction
+                cpu.lct.AdjustPrediction(inst->pc->instAddr(), false, downgradedFromConstant);
+                cpu.cvu.RemoveEntry(inst->GetTranslatedLoadAddr());
+                inst->SetBadLoadPrediction(true);
+                inst->SetBadConstantLoadPrediction(true);
+                DPRINTF(LvpDebug, "Bad Constant Load Prediction for inst: %s\n",
+                        *inst);
+            }
+            else
+            {
+                DPRINTF(LvpDebug, "Correct Constant Load Prediction for inst: %s\n",
+                        *inst);
+                inst->SetBadLoadPrediction(false);
+                inst->SetBadConstantLoadPrediction(false);
+
+                PacketPtr tempPacket = inst->GetPacket();
+
+                tempPacket->setLE(inst->GetLoadPrediction());
+
+                fault = inst->staticInst->completeAcc(tempPacket, &context,
+                inst->traceData);
+
+                if (fault != NoFault) {
+                    /* Invoke fault created by instruction completion */
+                    DPRINTF(MinorMem, "Fault in memory completeAcc: %s\n",
+                        fault->name());
+                    fault->invoke(thread, inst->staticInst);
+                }
+            }
+        }
+    }
+
+    if (inst->traceData) {
+        inst->traceData->setPredicate((use_context_predicate ?
+            context.readPredicate() : false));
+    }
+
+    if (cvuCorrect)
+    {
+        doInstCommitAccounting(inst);
+    }
+
+    /* Generate output to account for branches */
+    tryToBranch(inst, fault, branch);
+
+    return cvuCorrect;
 }
 
 bool
@@ -568,6 +678,10 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
         Fault init_fault = inst->staticInst->initiateAcc(&context,
             inst->traceData);
 
+            //               tryToSendToTransfers()
+            // LSQ | requests - - - - | transfer - - - - | ->
+            //                        | in flight memReqs|
+
         if (inst->inLSQ) {
             if (init_fault != NoFault) {
                 assert(inst->translationFault != NoFault);
@@ -607,6 +721,8 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
             }
+            std::printf("Here 2");
+            inst->SetHasBeenSentToMemory(true);
         }
 
         /* Restore thread PC */
@@ -1229,7 +1345,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
 
         DPRINTF(MinorExecute, "Trying to commit canCommitInsts: %d\n",
             can_commit_insts);
-
+        std::printf("Here 3");
         /* Test for PC events after every instruction */
         if (isInbetweenInsts(thread_id) && tryPCEvents(thread_id)) {
             ThreadContext *thread = cpu.getContext(thread_id);
@@ -1237,7 +1353,44 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             /* Branch as there was a change in PC */
             updateBranchData(thread_id, BranchData::UnpredictedBranch,
                 MinorDynInst::bubble(), thread->pcState(), branch);
-        } else if (mem_response &&
+        } 
+        else if (inst->GetIsLoadPredictedConstant() &&
+                 LVPTClass::IsPredictableLoad(inst) && // This should never be false if the previous is true, but being safe
+                 inst->GetHasBeenSentToMemory() && //This needs to happen after executeMemRefInst
+                 inst->GetTranslatedLoadAddr() != 0) //Make sure instruction has been translated (been through TLB)
+        {
+            std::printf("Shouldn't Get Here 2");
+            /* Try to commit from the memory responses next */
+            discard_inst = inst->id.streamSeqNum !=
+                           ex_info.streamSeqNum || discard;
+
+            DPRINTF(MinorExecute, "Trying to commit CONSTANT load mem response: %s\n",
+                *inst);
+
+            bool constantWasCorrect = true;
+
+            /* Complete or discard the response */
+            if (discard_inst) {
+                DPRINTF(MinorExecute, "Discarding mem inst: %s as its"
+                    " stream state was unexpected, expected: %d\n",
+                    *inst, ex_info.streamSeqNum);
+
+                lsq.popResponse(mem_response);
+            } else {
+                constantWasCorrect = fakeHandleMemResponse(inst, branch, fault);
+                if (constantWasCorrect)
+                {
+                    committed_inst = true;
+                }
+            }
+
+            if(constantWasCorrect)
+            {
+                completed_mem_ref = true;
+                completed_inst = true;
+            }
+        }
+        else if (mem_response &&
             num_mem_refs_committed < memoryCommitLimit)
         {
             /* Try to commit from the memory responses next */

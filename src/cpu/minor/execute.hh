@@ -240,6 +240,9 @@ class Execute : public Named
         LSQ::LSQRequestPtr response, BranchData &branch,
         Fault &fault);
 
+    bool fakeHandleMemResponse(MinorDynInstPtr inst,
+          BranchData &branch, Fault &fault);
+
     /** Execute a memory reference instruction.  This calls initiateAcc on
      *  the instruction which will then call writeMem or readMem to issue a
      *  memory access to the LSQ.

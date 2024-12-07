@@ -128,7 +128,7 @@ Scoreboard::markupInstDests(MinorDynInstPtr inst, Cycles retire_time,
             {
                 numLoadResults[index]++;
 
-                if (staticInst->getIsLoadPredicted())
+                if (inst->GetIsLoadPredicted())
                 {
                     loadResultPredicted[index]++;
                 }
@@ -207,7 +207,7 @@ Scoreboard::clearInstDests(MinorDynInstPtr inst, bool clear_unpredictable)
             {
                 numLoadResults[index]--;
 
-                if (staticInst->getIsLoadPredicted())
+                if (inst->GetIsLoadPredicted())
                 {
                     loadResultPredicted[index]--;
                 }

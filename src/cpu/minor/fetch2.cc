@@ -141,6 +141,7 @@ Fetch2::updateBranchPrediction(const BranchData &branch)
         /* No data to update */
         break;
       case BranchData::BadLVP:
+      case BranchData::BadConstantLVP:
         /* Not a branch, don't update branch pred */
         break;
       case BranchData::Interrupt:
@@ -471,21 +472,21 @@ Fetch2::evaluate()
                         DPRINTF(LvpDebug, "LCT Prediction value: %u\n",
                                     predict);
                         
-                        dyn_inst->staticInst->setLoadPrediction(predictionValue);
+                        dyn_inst->SetLoadPrediction(predictionValue);
 
                         if(predict)
                         {
                             if (isValid)
                             {
-                                dyn_inst->staticInst->setIsLoadPredicted(true);
+                                dyn_inst->SetIsLoadPredicted(true);
 
                                 if (isConstant)
                                 {
-                                    dyn_inst->staticInst->setIsLoadPredictedConstant(true);
+                                    dyn_inst->SetIsLoadPredictedConstant(false);
                                 }
                                 else
                                 {
-                                    dyn_inst->staticInst->setIsLoadPredictedConstant(false);
+                                    dyn_inst->SetIsLoadPredictedConstant(false);
                                 }
 
                                 DPRINTF(LvpDebug, "Predicting inst: %s value: 0x%016lX\n",
@@ -495,21 +496,21 @@ Fetch2::evaluate()
                             {
                                 DPRINTF(LvpDebug, "Tried to predict but invalid inst: %s\n",
                                     *dyn_inst);
-                                dyn_inst->staticInst->setIsLoadPredicted(false);
+                                dyn_inst->SetIsLoadPredicted(false);
                             }
                         }
                         else
                         {
                             DPRINTF(LvpDebug, "Not predicting inst: %s\n",
                                     *dyn_inst);
-                            dyn_inst->staticInst->setIsLoadPredicted(false);
+                            dyn_inst->SetIsLoadPredicted(false);
                         }
                     }
                     else
                     {
                         DPRINTF(LvpDebug, "Not predicting inst: %s\n",
                                     *dyn_inst);
-                        dyn_inst->staticInst->setIsLoadPredicted(false);
+                        dyn_inst->SetIsLoadPredicted(false);
                     }
 
                 } else {

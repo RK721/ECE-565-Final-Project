@@ -58,6 +58,7 @@
 #include "cpu/timing_expr.hh"
 #include "sim/faults.hh"
 #include "sim/insttracer.hh"
+#include "mem/packet.hh"
 
 namespace gem5
 {
@@ -237,6 +238,16 @@ class MinorDynInst : public RefCounted
      *  up */
     std::vector<RegId> flatDestRegIdx;
 
+    bool isLoadPredicted = false;
+    bool isLoadPredictedConstant = false;
+    bool badLoadPrediction = false;
+    bool badConstantLoadPrediction = false;
+    bool hasBeenSentToMemory = false;
+
+    uint64_t translatedLoadAddr = 0;
+    uint64_t loadPrediction = 0;
+    PacketPtr packet = NULL;
+
   public:
     MinorDynInst(StaticInstPtr si, InstId id_=InstId(), Fault fault_=NoFault) :
         staticInst(si), id(id_), fault(fault_), translationFault(NoFault),
@@ -244,6 +255,31 @@ class MinorDynInst : public RefCounted
     { }
 
   public:
+
+    bool GetHasBeenSentToMemory() const { return hasBeenSentToMemory; }
+    void SetHasBeenSentToMemory(bool val) { hasBeenSentToMemory = val; }
+
+    bool GetIsLoadPredicted() const { return isLoadPredicted; }
+    void SetIsLoadPredicted(bool val) { isLoadPredicted = val; }
+
+    bool GetIsLoadPredictedConstant() const { return isLoadPredictedConstant; }
+    void SetIsLoadPredictedConstant(bool val) { isLoadPredictedConstant = val; }
+
+    bool GetBadLoadPrediction() const { return badLoadPrediction; }
+    void SetBadLoadPrediction(bool val) { badLoadPrediction = val; }
+
+    bool GetBadConstantLoadPrediction() const { return badConstantLoadPrediction; }
+    void SetBadConstantLoadPrediction(bool val) { badConstantLoadPrediction = val; }
+
+    uint64_t GetLoadPrediction() const { return loadPrediction; }
+    void SetLoadPrediction(uint64_t val) { loadPrediction = val; }
+
+    uint64_t GetTranslatedLoadAddr() const { return translatedLoadAddr; }
+    void SetTranslatedLoadAddr(uint64_t val) { translatedLoadAddr = val; }
+
+    PacketPtr GetPacket() const { return packet; }
+    void SetPacket(PacketPtr val) { packet = val; }
+
     /** The BubbleIF interface. */
     bool isBubble() const { return id.fetchSeqNum == 0; }
 
