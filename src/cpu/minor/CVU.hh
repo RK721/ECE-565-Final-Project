@@ -22,7 +22,7 @@ class CVUClass : public Named
     bool AddEntry(std::uint64_t aAddress, std::uint64_t aData);
 
     // Check if an entry exists for the given address
-    bool CheckEntry(std::uint64_t aAddress, std::uint64_t &outData) const;
+    bool CheckEntry(std::uint64_t aAddress, std::uint64_t predictedValue);
 
     // Remove an entry for the given address
     void RemoveEntry(std::uint64_t aAddress);

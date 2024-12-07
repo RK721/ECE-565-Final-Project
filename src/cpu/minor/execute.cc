@@ -380,41 +380,46 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
     } else if (is_store || is_load || is_prefetch || is_atomic) {
         assert(packet);
 
+        uint64_t packetDataLE = 0;
+
+        switch(packet->getSize())
+        {
+            case 16:
+            case 8:
+            {
+                packetDataLE = packet->getLE<uint64_t>();
+            }
+            break;
+
+            case 4:
+            {
+                packetDataLE = packet->getLE<uint32_t>();
+            }
+            break;
+
+            case 2:
+            {
+                packetDataLE = packet->getLE<uint16_t>();
+            }
+            break;
+
+            default:
+            case 1:
+            {
+                packetDataLE = packet->getLE<uint8_t>();
+            }
+            break;
+        }
+
         DPRINTF(MinorMem, "Memory response inst: %s addr: 0x%x size: %d\n",
             *inst, packet->getAddr(), packet->getSize());
+
+        if (isStore)
+        {
+            cpu.cvu.RemoveEntry(packet->getAddr());
+        }
         
         if (packet->getSize() > 0 && LVPTClass::IsPredictableLoad(inst)) {
-
-            uint64_t packetDataLE = 0;
-
-            switch(packet->getSize())
-            {
-                case 16:
-                case 8:
-                {
-                    packetDataLE = packet->getLE<uint64_t>();
-                }
-                break;
-
-                case 4:
-                {
-                    packetDataLE = packet->getLE<uint32_t>();
-                }
-                break;
-
-                case 2:
-                {
-                    packetDataLE = packet->getLE<uint16_t>();
-                }
-                break;
-
-                default:
-                case 1:
-                {
-                    packetDataLE = packet->getLE<uint8_t>();
-                }
-                break;
-            }
 
             DPRINTF(LvpDebug, "Memory data: 0x%016lX size in bits: %u\n",
                     packetDataLE, packet->getSize() * 8); //Rick This is where the data will be written back to LVPT
@@ -422,11 +427,23 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             DPRINTF(LvpDebug, "Load response inst: %s addr: 0x%x size: %d\n",
                     *inst, packet->getAddr(), packet->getSize());
 
-            cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE));
+            bool downgradedFromConstant = false;
+            bool upgradedToConstant = cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE), downgradedFromConstant);
 
-            //CVU: If CVU was wrong, make sure to degrade LCT entry
+            if (upgradedToConstant)
+            {
+                cpu.cvu.AddEntry()
+            }
 
-            //CVU: Check returned value against CVU for constant predictions
+            if (downgradedFromConstant)
+            {
+                cpu.cvu.RemoveEntry(packet->getAddr());
+            }
+
+            if (dyn_ininstst->staticInst->setIsLoadPredictedConstant(true))
+            {
+                bool cvuCorrect = cpu.cvu.CheckEntry(packet->getAddr(), inst->staticInst->getLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
+            }
 
             if (inst->staticInst->getIsLoadPredicted() && (packetDataLE != inst->staticInst->getLoadPrediction()))
             {
