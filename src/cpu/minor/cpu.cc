@@ -49,8 +49,8 @@ namespace gem5
 
 MinorCPU::MinorCPU(const BaseMinorCPUParams &params) :
     BaseCPU(params),
-    lvpt("LVPT", 1024),
-    lct("LCT", 256, 2),
+    lvpt("LVPT", params.lvptSize),
+    lct("LCT", params.lctSize, params.lctBits),
     cvu("CVU"),
     threadPolicy(params.threadPolicy),
     stats(this)

@@ -454,6 +454,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
             if (inst->GetIsLoadPredicted() && (packetDataLE != inst->GetLoadPrediction()))
             {
+                cpu.stats.numIncorrectPred++;
                 DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
                     packetDataLE, inst->GetLoadPrediction()); 
                 
@@ -465,6 +466,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             }
             else if (inst->GetIsLoadPredicted())
             {
+                cpu.stats.numCorrectPred++;
                 DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
                     packetDataLE, inst->GetLoadPrediction());
 
@@ -573,6 +575,7 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             //we know we're going to degrade the prediction and remove the CVU entry
             if(!cvuCorrect)
             {
+                cpu.stats.numCVUIncorrect++;
                 // Bad Constant Prediction
                 cpu.lct.AdjustPrediction(inst->pc->instAddr(), false, downgradedFromConstant);
                 if (!inst->GetRequestFailed() && (inst->translationFault == NoFault))
@@ -586,6 +589,7 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             }
             else
             {
+                cpu.stats.numCVUCorrect++;
                 DPRINTF(LvpDebug, "Correct Constant Load Prediction for inst: %s\n",
                         *inst);
                 inst->SetBadLoadPrediction(false);

@@ -409,6 +409,24 @@ def addCommonOptions(parser):
         "that are present under any of the roots. If not given, dump all "
         "stats. ")
 
+    parser.add_argument("--lvptSize", default=1024, action="store", type=int,
+        help="LVPT num entries rounded down to power of 2")
+
+    parser.add_argument("--lctSize", default=1024, action="store", type=int,
+        help="LCT num entries rounded down to power of 2")
+
+    parser.add_argument("--lctStateBits", default=2, action="store", type=int,
+        help="LCT state bit width, 1 or 2")
+
+    parser.add_argument('--lvp', action='store_true')
+    parser.add_argument('--no-lvp', dest='enableLVP', action='store_false')
+    parser.set_defaults(enableLVP=True)
+
+    parser.add_argument('--const-lvp', action='store_true')
+    parser.add_argument('--no-const-lvp', dest='enableConstantLVP', action='store_false')
+    parser.set_defaults(enableConstantLVP=True)
+
+
 
 def addSEOptions(parser):
     # Benchmark options

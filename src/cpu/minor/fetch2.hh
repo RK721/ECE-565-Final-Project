@@ -88,6 +88,9 @@ class Fetch2 : public Named
     /** Width of output of this stage/input of next in instructions */
     unsigned int outputWidth;
 
+    bool enableLVP = true;
+    bool enableConstantLVP = true;
+
     /** If true, more than one input word can be processed each cycle if
      *  there is room in the output to contain its processed data */
     bool processMoreThanOneInput;

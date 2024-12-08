@@ -76,6 +76,8 @@ Fetch2::Fetch2(const std::string &name,
     processMoreThanOneInput(params.fetch2CycleInput),
     branchPredictor(*params.branchPred),
     fetchInfo(params.numThreads),
+    enableLVP(params.enableLVP),
+    enableConstantLVP(params.enableConstantLVP),
     threadPriority(0), stats(&cpu_)
 {
     if (outputWidth < 1)
@@ -461,8 +463,9 @@ Fetch2::evaluate()
                      *  necessary */
                     predictBranch(dyn_inst, prediction);
 
-                    if (LVPTClass::IsPredictableLoad(dyn_inst))
+                    if (LVPTClass::IsPredictableLoad(dyn_inst) && enableLVP)
                     {
+                        cpu.stats.numPredictableLoads++;
                         bool isConstant = false;
                         uint64_t predictionValue = 0;
 
@@ -479,12 +482,14 @@ Fetch2::evaluate()
                             if (isValid)
                             {
                                 dyn_inst->SetIsLoadPredicted(true);
+                                cpu.stats.numPred++;
 
-                                if (isConstant)
+                                if (isConstant && enableConstantLVP)
                                 {
                                     dyn_inst->SetIsLoadPredictedConstant(true);
                                     DPRINTF(LvpDebug, "Predicting inst: %s constant\n",
                                     *dyn_inst);
+                                    cpu.stats.numConstPred++;
                                 }
                                 else
                                 {

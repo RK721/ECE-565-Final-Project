@@ -287,6 +287,12 @@ class BaseMinorCPU(BaseCPU):
     branchPred = Param.BranchPredictor(TournamentBP(
         numThreads = Parent.numThreads), "Branch Predictor")
 
+    lvptSize = Param.Int("LVPT size")
+    lctSize = Param.Int("LCT size")
+    lctBits = Param.Int("LCT bit width")
+    enableLVP = Param.Bool("Enable Load Value Prediction")
+    enableConstantLVP = Param.Bool("Enable Constant Load Value Prediction")
+
     def addCheckerCpu(self):
         print("Checker not yet supported by MinorCPU")
         exit(1)
