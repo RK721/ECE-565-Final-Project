@@ -294,7 +294,6 @@ Execute::tryToBranch(MinorDynInstPtr inst, Fault fault, BranchData &branch)
     } else if (LVPTClass::IsPredictableLoad(inst) && inst->GetBadLoadPrediction()) {
         if(inst->GetBadConstantLoadPrediction())
         {
-            std::printf("Here1");
             reason = BranchData::BadConstantLVP;
             target->setPC(inst->pc->instAddr());
 
@@ -506,7 +505,6 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
         fatal("There should only ever be reads, "
             "writes or faults at this point\n");
     }
-
     lsq.popResponse(response);
 
     if (inst->traceData) {
@@ -524,7 +522,6 @@ bool
 Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
     BranchData &branch, Fault &fault)
 {
-    std::printf("Shouldn't Get Here 1");
     bool cvuCorrect = true;
 
     ThreadID thread_id = inst->id.threadId;
@@ -562,9 +559,13 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
         
         if (LVPTClass::IsPredictableLoad(inst)) {
 
-            if (inst->GetIsLoadPredictedConstant())
+            if (inst->GetIsLoadPredictedConstant() && !inst->GetRequestFailed() && (inst->translationFault == NoFault))
             {
                 cvuCorrect = cpu.cvu.CheckEntry(inst->GetTranslatedLoadAddr(), inst->GetLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
+            }
+            else if (inst->GetRequestFailed() || (inst->translationFault != NoFault))
+            {
+                cvuCorrect = false;
             }
 
             bool downgradedFromConstant = false;
@@ -574,7 +575,10 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             {
                 // Bad Constant Prediction
                 cpu.lct.AdjustPrediction(inst->pc->instAddr(), false, downgradedFromConstant);
-                cpu.cvu.RemoveEntry(inst->GetTranslatedLoadAddr());
+                if (!inst->GetRequestFailed() && (inst->translationFault == NoFault))
+                {
+                    cpu.cvu.RemoveEntry(inst->GetTranslatedLoadAddr());
+                }
                 inst->SetBadLoadPrediction(true);
                 inst->SetBadConstantLoadPrediction(true);
                 DPRINTF(LvpDebug, "Bad Constant Load Prediction for inst: %s\n",
@@ -721,7 +725,6 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
             }
-            std::printf("Here 2");
             inst->SetHasBeenSentToMemory(true);
         }
 
@@ -1316,6 +1319,9 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
 
         QueuedInst *head_inflight_inst = &(ex_info.inFlightInsts->front());
 
+        DPRINTF(MinorInterrupt, "Head of inFlightInsts: %s\n",
+                *(ex_info.inFlightInsts->front().inst));
+
         InstSeqNum head_exec_seq_num =
             head_inflight_inst->inst->id.execSeqNum;
 
@@ -1343,9 +1349,14 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         LSQ::LSQRequestPtr mem_response =
             (inst->inLSQ ? lsq.findResponse(inst) : NULL);
 
+        if (inst->translationFault == NoFault)
+        {
+            DPRINTF(MinorExecute, "Trying to commit CONSTANT load mem response: %s, inst->GetIsLoadPredictedConstant() %u, LVPTClass::IsPredictableLoad(inst) %u, inst->GetHasBeenSentToMemory() %u, inst->GetTranslatedLoadAddr() %u, inst->GetRequestFailed() %u \n",
+                *inst, inst->GetIsLoadPredictedConstant(), LVPTClass::IsPredictableLoad(inst), inst->GetHasBeenSentToMemory(), inst->GetTranslatedLoadAddr(), inst->GetRequestFailed());
+        }
+        
         DPRINTF(MinorExecute, "Trying to commit canCommitInsts: %d\n",
             can_commit_insts);
-        std::printf("Here 3");
         /* Test for PC events after every instruction */
         if (isInbetweenInsts(thread_id) && tryPCEvents(thread_id)) {
             ThreadContext *thread = cpu.getContext(thread_id);
@@ -1357,9 +1368,8 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         else if (inst->GetIsLoadPredictedConstant() &&
                  LVPTClass::IsPredictableLoad(inst) && // This should never be false if the previous is true, but being safe
                  inst->GetHasBeenSentToMemory() && //This needs to happen after executeMemRefInst
-                 inst->GetTranslatedLoadAddr() != 0) //Make sure instruction has been translated (been through TLB)
+                 ((inst->GetTranslatedLoadAddr() != 0) || (inst->GetRequestFailed()) || inst->translationFault != NoFault)) //Make sure instruction has been translated (been through TLB) or let it go through if it failed
         {
-            std::printf("Shouldn't Get Here 2");
             /* Try to commit from the memory responses next */
             discard_inst = inst->id.streamSeqNum !=
                            ex_info.streamSeqNum || discard;
@@ -1374,8 +1384,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                 DPRINTF(MinorExecute, "Discarding mem inst: %s as its"
                     " stream state was unexpected, expected: %d\n",
                     *inst, ex_info.streamSeqNum);
-
-                lsq.popResponse(mem_response);
+                //lsq.popResponse(mem_response); We manually remove these responses in lsq, so shouldn't need to do this here
             } else {
                 constantWasCorrect = fakeHandleMemResponse(inst, branch, fault);
                 if (constantWasCorrect)
@@ -1823,7 +1832,7 @@ Execute::evaluate()
                 FUPipeline *fu = funcUnits[head_inst.inst->fuIndex];
                 if ((fu->stalled &&
                      fu->front().inst->id == head_inst.inst->id) ||
-                     lsq.findResponse(head_inst.inst))
+                     lsq.findResponse(head_inst.inst) || head_inst.inst->GetIsLoadPredictedConstant())
                 {
                     head_inst_might_commit = true;
                     break;
@@ -1971,7 +1980,7 @@ Execute::getCommittingThread()
             MinorDynInstPtr inst = head_inflight_inst->inst;
 
             can_commit_insts = can_commit_insts &&
-                (!inst->inLSQ || (lsq.findResponse(inst) != NULL));
+                (!inst->inLSQ || inst->GetIsLoadPredictedConstant() || (lsq.findResponse(inst) != NULL));
 
             if (!inst->inLSQ) {
                 bool can_transfer_mem_inst = false;

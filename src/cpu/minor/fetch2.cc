@@ -482,7 +482,9 @@ Fetch2::evaluate()
 
                                 if (isConstant)
                                 {
-                                    dyn_inst->SetIsLoadPredictedConstant(false);
+                                    dyn_inst->SetIsLoadPredictedConstant(true);
+                                    DPRINTF(LvpDebug, "Predicting inst: %s constant\n",
+                                    *dyn_inst);
                                 }
                                 else
                                 {

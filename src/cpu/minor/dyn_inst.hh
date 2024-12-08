@@ -243,6 +243,7 @@ class MinorDynInst : public RefCounted
     bool badLoadPrediction = false;
     bool badConstantLoadPrediction = false;
     bool hasBeenSentToMemory = false;
+    bool requestFailed = false;
 
     uint64_t translatedLoadAddr = 0;
     uint64_t loadPrediction = 0;
@@ -270,6 +271,9 @@ class MinorDynInst : public RefCounted
 
     bool GetBadConstantLoadPrediction() const { return badConstantLoadPrediction; }
     void SetBadConstantLoadPrediction(bool val) { badConstantLoadPrediction = val; }
+
+    bool GetRequestFailed() const { return requestFailed; }
+    void SetRequestFailed(bool val) { requestFailed = val; }
 
     uint64_t GetLoadPrediction() const { return loadPrediction; }
     void SetLoadPrediction(uint64_t val) { loadPrediction = val; }

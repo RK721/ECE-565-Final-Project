@@ -292,12 +292,13 @@ LSQ::SingleDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
         setState(Translated);
         makePacket();
     }
-    std::printf("LSQHere 1");
     // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
     if(inst->GetIsLoadPredictedConstant())
     {
-        std::printf("Shouldn't Get Here 3");
-        inst->SetTranslatedLoadAddr(packet->getAddr());
+        if (inst->translationFault == NoFault)
+        {
+            inst->SetTranslatedLoadAddr(packet->getAddr());
+        }
         inst->SetPacket(packet);
         port.tryToSendToTransfers(this);
     }
@@ -394,12 +395,13 @@ LSQ::SplitDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
     } else if (numTranslatedFragments == numFragments) {
         makeFragmentPackets();
         setState(Translated);
-        std::printf("LSQHere 2");
         // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
         if(inst->GetIsLoadPredictedConstant())
         {
-            std::printf("Shouldn't Get Here 3");
-            inst->SetTranslatedLoadAddr(packet->getAddr());
+            if (inst->translationFault == NoFault)
+            {
+                inst->SetTranslatedLoadAddr(packet->getAddr());
+            }
             inst->SetPacket(packet);
             port.tryToSendToTransfers(this);
         }
@@ -1012,6 +1014,11 @@ LSQ::tryToSendToTransfers(LSQRequestPtr request)
         return;
     }
 
+    if(request->state == LSQRequest::Failed)
+    {
+        request->inst->SetRequestFailed(true);
+    }
+
     if (request->isComplete() || request->state == LSQRequest::Failed) {
         DPRINTF(MinorMem, "Passing a %s transfer on to transfers"
             " queue\n", (request->isComplete() ? "completed" : "failed"));
@@ -1330,6 +1337,9 @@ LSQ::recvTimingResp(PacketPtr response)
 
     numAccessesInMemorySystem--;
 
+    DPRINTF(MinorMem, "numAccessesInMemorySystem: %u, request state: %s\n",
+        numAccessesInMemorySystem, request->state);
+
     if (response->isError()) {
         DPRINTF(MinorMem, "Received error response packet: %s\n",
             *request->inst);
@@ -1504,7 +1514,6 @@ LSQ::step()
     if (!requests.empty())
         tryToSendToTransfers(requests.front());
 
-    std::printf("Maybe This is the issue");
     removeSkippedResponses();
 
     storeBuffer.step();
@@ -1549,12 +1558,24 @@ LSQ::findResponse(MinorDynInstPtr inst)
 
 void LSQ::removeSkippedResponses()
 {
-    LSQRequestPtr request = transfers.front();
+    if (!transfers.empty()) {
+        LSQRequestPtr request = transfers.front();
 
-    if (request->inst->GetIsLoadPredictedConstant())
-    {
-        std::printf("Shouldn't Get Here 4");
-        popResponse(request);
+        if (request->inst->GetIsLoadPredictedConstant()) {
+            bool complete = request->isComplete();
+            bool can_store = storeBuffer.canInsert();
+            bool to_store_buffer = request->state ==
+                LSQRequest::StoreToStoreBuffer;
+
+            if ((complete && !(request->isBarrier() && !can_store)) ||
+                (to_store_buffer && can_store))
+            {
+                DPRINTF(MinorMem, "Deleting constant %s request: %s\n",
+                    (request->isLoad ? "load" : "store"),
+                    *(request->inst));
+                popResponse(request);
+            }
+        }
     }
 }
 
@@ -1572,9 +1593,9 @@ LSQ::popResponse(LSQ::LSQRequestPtr response)
         numAccessesIssuedToMemory--;
 
     if (response->state != LSQRequest::StoreInStoreBuffer) {
-        DPRINTF(MinorMem, "Deleting %s request: %s\n",
+        DPRINTF(MinorMem, "Deleting %s request: %s numAccessesIssuedToMemory: %u\n",
             (response->isLoad ? "load" : "store"),
-            *(response->inst));
+            *(response->inst), numAccessesIssuedToMemory);
 
         delete response;
     }
