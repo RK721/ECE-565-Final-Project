@@ -384,7 +384,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
             *inst, packet->getAddr(), packet->getSize());
         
         if (packet->getSize() > 0 && LVPTClass::IsPredictableLoad(inst)) {
-
+            cpu.stats.numLoads++;
             uint64_t packetDataLE = 0;
 
             switch(packet->getSize())
@@ -421,12 +421,27 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
             DPRINTF(LvpDebug, "Load response inst: %s addr: 0x%x size: %d\n",
                     *inst, packet->getAddr(), packet->getSize());
+            
+            if ((cpu.stats.lastLoadValue.find(inst->pc->instAddr()) != cpu.stats.lastLoadValue.end()) && // if key exists
+                        (packetDataLE == cpu.stats.lastLoadValue[inst->pc->instAddr()])) {               // if the last value matches
+                cpu.stats.localityMap[inst->pc->instAddr()]++;
+                cpu.stats.numLocality++;
+            }
+            
+            cpu.stats.lastLoadValue[inst->pc->instAddr()] = packetDataLE;
+            // Add number of CVU misses
+            // Successful constant identification rates?
 
+            
             cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE));
 
             //CVU: If CVU was wrong, make sure to degrade LCT entry
 
             //CVU: Check returned value against CVU for constant predictions
+
+            if (inst->staticInst->getIsLoadPredicted()) {
+                cpu.stats.numPred++;
+            }
 
             if (inst->staticInst->getIsLoadPredicted() && (packetDataLE != inst->staticInst->getLoadPrediction()))
             {
@@ -435,7 +450,9 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
                 
                 DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
                         *inst);
-                
+                // Need logic for CVU miss
+                cpu.stats.numIncorrectPred++;
+
                 inst->staticInst->setBadLoadPrediction(true);
             }
             else if (inst->staticInst->getIsLoadPredicted())
@@ -445,6 +462,8 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
                 DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
                         *inst);
+
+                cpu.stats.numCorrectPred++;
 
                 inst->staticInst->setBadLoadPrediction(false);
             }

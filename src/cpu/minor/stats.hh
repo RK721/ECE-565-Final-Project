@@ -82,6 +82,19 @@ struct MinorStats : public statistics::Group
     /** Number of instructions by type (OpClass) */
     statistics::Vector2d committedInstType;
 
+    // LVPU stats
+    statistics::Scalar numLoads;
+    statistics::Scalar numLocality;
+
+    //statistics::Formula percLocality;
+
+    statistics::Scalar numCorrectPred;
+    statistics::Scalar numIncorrectPred;
+    statistics::Scalar numPred;
+
+    std::map<std::uint64_t, std::uint64_t> lastLoadValue;
+    std::map<std::uint64_t, int> localityMap;
+
 };
 
 } // namespace minor

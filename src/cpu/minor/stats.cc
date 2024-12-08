@@ -65,7 +65,17 @@ MinorStats::MinorStats(BaseCPU *base_cpu)
                 statistics::units::Count, statistics::units::Cycle>::get(),
              "IPC: instructions per cycle"),
     ADD_STAT(committedInstType, statistics::units::Count::get(),
-             "Class of committed instruction")
+             "Class of committed instruction"),
+    
+    // LVPU
+    ADD_STAT(numLoads, statistics::units::Count::get(), "Number of Loads Committed"),
+    ADD_STAT(numLocality, statistics::units::Count::get(), "Number of Loads with the Same Previous Value"),
+
+    ADD_STAT(numCorrectPred, statistics::units::Count::get(), "Number of Correct Load Predictions"),
+    ADD_STAT(numIncorrectPred, statistics::units::Count::get(), "Number of Incorrect Load Predictions"),
+    ADD_STAT(numPred, statistics::units::Count::get(), "Total Number of Load Predictions")
+    //ADD_STAT(percLocality, statistics::units::Count::get(), "Number of Loads Committed")
+
 {
     quiesceCycles.prereq(quiesceCycles);
 
@@ -79,6 +89,10 @@ MinorStats::MinorStats(BaseCPU *base_cpu)
         .init(base_cpu->numThreads, enums::Num_OpClass)
         .flags(statistics::total | statistics::pdf | statistics::dist);
     committedInstType.ysubnames(enums::OpClassStrings);
+
+    //percLocality = 
+
+
 }
 
 } // namespace minor
