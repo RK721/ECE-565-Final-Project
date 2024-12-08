@@ -560,7 +560,6 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             *inst, inst->GetTranslatedLoadAddr());
         
         if (LVPTClass::IsPredictableLoad(inst)) {
-            cpu.stats.num
 
             if (inst->GetIsLoadPredictedConstant() && !inst->GetRequestFailed() && (inst->translationFault == NoFault))
             {
