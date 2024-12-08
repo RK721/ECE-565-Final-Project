@@ -560,6 +560,7 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             *inst, inst->GetTranslatedLoadAddr());
         
         if (LVPTClass::IsPredictableLoad(inst)) {
+            cpu.stats.num
 
             if (inst->GetIsLoadPredictedConstant() && !inst->GetRequestFailed() && (inst->translationFault == NoFault))
             {
@@ -576,6 +577,7 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             if(!cvuCorrect)
             {
                 cpu.stats.numCVUIncorrect++;
+                cpu.stats.numIncorrectPred++;
                 // Bad Constant Prediction
                 cpu.lct.AdjustPrediction(inst->pc->instAddr(), false, downgradedFromConstant);
                 if (!inst->GetRequestFailed() && (inst->translationFault == NoFault))
@@ -590,6 +592,7 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
             else
             {
                 cpu.stats.numCVUCorrect++;
+                cpu.stats.numCorrectPred++;
                 DPRINTF(LvpDebug, "Correct Constant Load Prediction for inst: %s\n",
                         *inst);
                 inst->SetBadLoadPrediction(false);

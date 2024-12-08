@@ -63,6 +63,7 @@ struct MinorStats : public statistics::Group
     /** Number of simulated instructions */
     statistics::Scalar numInsts;
 
+    statistics::Scalar numLocality;
     statistics::Scalar numPredictableLoads;
     statistics::Scalar numCorrectPred;
     statistics::Scalar numIncorrectPred;
