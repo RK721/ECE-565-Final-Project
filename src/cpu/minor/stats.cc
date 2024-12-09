@@ -62,6 +62,8 @@ MinorStats::MinorStats(BaseCPU *base_cpu)
              "Number of incorrect constant lvp predictions"),
     ADD_STAT(numConstPred, statistics::units::Count::get(),
              "Number of constant lvp predictions"),
+    ADD_STAT(numCyclesSavedByConstPred, statistics::units::Count::get(),
+             "Number of Cycles that would've been skipped with constant prediction"),
     ADD_STAT(numOps, statistics::units::Count::get(),
              "Number of ops (including micro ops) committed"),
     ADD_STAT(numDiscardedOps, statistics::units::Count::get(),

@@ -134,10 +134,12 @@ class MinorDefaultIntMulFU(MinorFU):
     opClasses = minorMakeOpClassSet(['IntMult'])
     timings = [MinorFUTiming(description='Mul',
         srcRegsRelativeLats=[0])]
+    issueLat = 16
     opLat = 16
 
 class MinorDefaultIntDivFU(MinorFU):
     opClasses = minorMakeOpClassSet(['IntDiv'])
+    issueLat = 16
     opLat = 16
 
 class MinorDefaultFloatSimdFU(MinorFU):

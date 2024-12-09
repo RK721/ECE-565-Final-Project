@@ -247,6 +247,7 @@ class MinorDynInst : public RefCounted
 
     uint64_t translatedLoadAddr = 0;
     uint64_t loadPrediction = 0;
+    Cycles sentToMemoryCycle;
     PacketPtr packet = NULL;
 
   public:
@@ -280,6 +281,9 @@ class MinorDynInst : public RefCounted
 
     uint64_t GetTranslatedLoadAddr() const { return translatedLoadAddr; }
     void SetTranslatedLoadAddr(uint64_t val) { translatedLoadAddr = val; }
+
+    Cycles GetSentToMemoryCycle() const { return sentToMemoryCycle; }
+    void SetSentToMemoryCycle(Cycles val) { sentToMemoryCycle = val; }
 
     PacketPtr GetPacket() const { return packet; }
     void SetPacket(PacketPtr val) { packet = val; }

@@ -70,6 +70,7 @@ struct MinorStats : public statistics::Group
     statistics::Scalar numCVUCorrect;
     statistics::Scalar numCVUIncorrect;
     statistics::Scalar numConstPred;
+    statistics::Scalar numCyclesSavedByConstPred;
 
     /** Number of simulated insts and microops */
     statistics::Scalar numOps;

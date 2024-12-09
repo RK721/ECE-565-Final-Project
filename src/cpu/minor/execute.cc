@@ -441,45 +441,75 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
 
             bool downgradedFromConstant = false;
             bool upgradedToConstant = cpu.lct.AdjustPrediction(inst->pc->instAddr(), !cpu.lvpt.AddEntry(inst->pc->instAddr(), packetDataLE), downgradedFromConstant);
+            
+            bool cvuCorrect = true;
+            if (inst->GetIsLoadPredictedConstant())
+            {
+                cvuCorrect = cpu.cvu.CheckEntry(packet->getAddr(), inst->GetLoadPrediction()); // This is the logic that will be needed to determine if we have to reissue the load
+            }
+
+            if (inst->GetIsLoadPredictedConstant())
+            {
+                if(!cvuCorrect)
+                {
+                    cpu.stats.numCVUIncorrect++;
+                    DPRINTF(LvpDebug, "Bad Constant Load Prediction for inst: %s\n",
+                            *inst);
+                }
+                else
+                {
+                    cpu.stats.numCVUCorrect++;
+
+                    cpu.stats.numCyclesSavedByConstPred += cpu.curCycle() - inst->GetSentToMemoryCycle();
+
+                    if (fault != NoFault) {
+                        /* Invoke fault created by instruction completion */
+                        DPRINTF(MinorMem, "Fault in memory completeAcc: %s\n",
+                            fault->name());
+                        fault->invoke(thread, inst->staticInst);
+                    }
+                }
+            }
+            else {
+                if (inst->GetIsLoadPredicted() && (packetDataLE != inst->GetLoadPrediction()))
+                {
+                    cpu.stats.numIncorrectPred++;
+                    DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
+                        packetDataLE, inst->GetLoadPrediction()); 
+                    
+                    DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
+                            *inst);
+                    
+                    inst->SetBadLoadPrediction(true);
+                    inst->SetBadConstantLoadPrediction(false);
+                }
+                else if (inst->GetIsLoadPredicted())
+                {
+                    cpu.stats.numCorrectPred++;
+                    DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
+                        packetDataLE, inst->GetLoadPrediction());
+
+                    DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
+                            *inst);
+
+                    inst->SetBadLoadPrediction(false);
+                    inst->SetBadConstantLoadPrediction(false);
+                }
+                else
+                {
+                    DPRINTF(LvpDebug, "Load wasn't predicted for inst: %s\n",
+                            *inst);
+                }
+            }
 
             if (upgradedToConstant)
             {
-                cpu.cvu.AddEntry(inst->pc->instAddr(), packetDataLE);
+                cpu.cvu.AddEntry(packet->getAddr(), packetDataLE);
             }
 
-            if (downgradedFromConstant) // Really this should never happen here, as constants get handled elsewhere
+            if (downgradedFromConstant) 
             {
                 cpu.cvu.RemoveEntry(packet->getAddr());
-            }
-
-            if (inst->GetIsLoadPredicted() && (packetDataLE != inst->GetLoadPrediction()))
-            {
-                cpu.stats.numIncorrectPred++;
-                DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
-                    packetDataLE, inst->GetLoadPrediction()); 
-                
-                DPRINTF(LvpDebug, "Bad Load Prediction for inst: %s\n",
-                        *inst);
-                
-                inst->SetBadLoadPrediction(true);
-                inst->SetBadConstantLoadPrediction(false);
-            }
-            else if (inst->GetIsLoadPredicted())
-            {
-                cpu.stats.numCorrectPred++;
-                DPRINTF(LvpDebug, "Actual data: 0x%016lX Predicted data: 0x%016lX\n",
-                    packetDataLE, inst->GetLoadPrediction());
-
-                DPRINTF(LvpDebug, "Load Prediction CORRECT for inst: %s\n",
-                        *inst);
-
-                inst->SetBadLoadPrediction(false);
-                inst->SetBadConstantLoadPrediction(false);
-            }
-            else
-            {
-                DPRINTF(LvpDebug, "Load wasn't predicted for inst: %s\n",
-                        *inst);
             }
         }
         else if (is_load)
@@ -598,6 +628,8 @@ Execute::fakeHandleMemResponse(MinorDynInstPtr inst,
                 inst->SetBadConstantLoadPrediction(false);
 
                 PacketPtr tempPacket = inst->GetPacket();
+
+                //tempPacket->flags.set(FlagsType::STATIC_DATA)
 
                 tempPacket->setLE(inst->GetLoadPrediction());
 
@@ -731,7 +763,8 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
                 lsq.pushFailedRequest(inst);
                 inst->inLSQ = true;
             }
-            inst->SetHasBeenSentToMemory(true);
+            //inst->SetHasBeenSentToMemory(true);
+            inst->SetSentToMemoryCycle(cpu.curCycle());
         }
 
         /* Restore thread PC */
@@ -1355,11 +1388,11 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
         LSQ::LSQRequestPtr mem_response =
             (inst->inLSQ ? lsq.findResponse(inst) : NULL);
 
-        if (inst->translationFault == NoFault)
+        /*if (inst->translationFault == NoFault)
         {
             DPRINTF(MinorExecute, "Trying to commit CONSTANT load mem response: %s, inst->GetIsLoadPredictedConstant() %u, LVPTClass::IsPredictableLoad(inst) %u, inst->GetHasBeenSentToMemory() %u, inst->GetTranslatedLoadAddr() %u, inst->GetRequestFailed() %u \n",
                 *inst, inst->GetIsLoadPredictedConstant(), LVPTClass::IsPredictableLoad(inst), inst->GetHasBeenSentToMemory(), inst->GetTranslatedLoadAddr(), inst->GetRequestFailed());
-        }
+        }*/
         
         DPRINTF(MinorExecute, "Trying to commit canCommitInsts: %d\n",
             can_commit_insts);
@@ -1371,12 +1404,12 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
             updateBranchData(thread_id, BranchData::UnpredictedBranch,
                 MinorDynInst::bubble(), thread->pcState(), branch);
         } 
-        else if (inst->GetIsLoadPredictedConstant() &&
+        /*else if (inst->GetIsLoadPredictedConstant() &&
                  LVPTClass::IsPredictableLoad(inst) && // This should never be false if the previous is true, but being safe
                  inst->GetHasBeenSentToMemory() && //This needs to happen after executeMemRefInst
                  ((inst->GetTranslatedLoadAddr() != 0) || (inst->GetRequestFailed()) || inst->translationFault != NoFault)) //Make sure instruction has been translated (been through TLB) or let it go through if it failed
         {
-            /* Try to commit from the memory responses next */
+            // Try to commit from the memory responses next
             discard_inst = inst->id.streamSeqNum !=
                            ex_info.streamSeqNum || discard;
 
@@ -1385,7 +1418,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
 
             bool constantWasCorrect = true;
 
-            /* Complete or discard the response */
+            // Complete or discard the response
             if (discard_inst) {
                 DPRINTF(MinorExecute, "Discarding mem inst: %s as its"
                     " stream state was unexpected, expected: %d\n",
@@ -1404,7 +1437,7 @@ Execute::commit(ThreadID thread_id, bool only_commit_microops, bool discard,
                 completed_mem_ref = true;
                 completed_inst = true;
             }
-        }
+        }*/
         else if (mem_response &&
             num_mem_refs_committed < memoryCommitLimit)
         {
@@ -1838,7 +1871,7 @@ Execute::evaluate()
                 FUPipeline *fu = funcUnits[head_inst.inst->fuIndex];
                 if ((fu->stalled &&
                      fu->front().inst->id == head_inst.inst->id) ||
-                     lsq.findResponse(head_inst.inst) || head_inst.inst->GetIsLoadPredictedConstant())
+                     lsq.findResponse(head_inst.inst))// || head_inst.inst->GetIsLoadPredictedConstant())
                 {
                     head_inst_might_commit = true;
                     break;
@@ -1986,7 +2019,7 @@ Execute::getCommittingThread()
             MinorDynInstPtr inst = head_inflight_inst->inst;
 
             can_commit_insts = can_commit_insts &&
-                (!inst->inLSQ || inst->GetIsLoadPredictedConstant() || (lsq.findResponse(inst) != NULL));
+                (!inst->inLSQ || (lsq.findResponse(inst) != NULL));
 
             if (!inst->inLSQ) {
                 bool can_transfer_mem_inst = false;

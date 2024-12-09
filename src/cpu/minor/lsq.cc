@@ -293,7 +293,7 @@ LSQ::SingleDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
         makePacket();
     }
     // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
-    if(inst->GetIsLoadPredictedConstant())
+    /*if(inst->GetIsLoadPredictedConstant())
     {
         if (inst->translationFault == NoFault)
         {
@@ -303,9 +303,9 @@ LSQ::SingleDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
         port.tryToSendToTransfers(this);
     }
     else
-    {
+    {*/
         port.tryToSendToTransfers(this);
-    }
+    //}
 
     /* Let's try and wake up the processor for the next cycle */
     port.cpu.wakeupOnEvent(Pipeline::ExecuteStageId);
@@ -396,7 +396,7 @@ LSQ::SplitDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
         makeFragmentPackets();
         setState(Translated);
         // The translated packet address is a secret tool that'll help us later (used in fakeHandleMemResponse)
-        if(inst->GetIsLoadPredictedConstant())
+        /*if(inst->GetIsLoadPredictedConstant())
         {
             if (inst->translationFault == NoFault)
             {
@@ -406,9 +406,9 @@ LSQ::SplitDataRequest::finish(const Fault &fault_, const RequestPtr &request_,
             port.tryToSendToTransfers(this);
         }
         else
-        {
+        {*/
             port.tryToSendToTransfers(this);
-        }
+        //}
     } else {
         /* Avoid calling translateTiming from within ::finish */
         assert(!translationEvent.scheduled());
@@ -1014,10 +1014,10 @@ LSQ::tryToSendToTransfers(LSQRequestPtr request)
         return;
     }
 
-    if(request->state == LSQRequest::Failed)
+    /*if(request->state == LSQRequest::Failed)
     {
         request->inst->SetRequestFailed(true);
-    }
+    }*/
 
     if (request->isComplete() || request->state == LSQRequest::Failed) {
         DPRINTF(MinorMem, "Passing a %s transfer on to transfers"
@@ -1514,7 +1514,7 @@ LSQ::step()
     if (!requests.empty())
         tryToSendToTransfers(requests.front());
 
-    removeSkippedResponses();
+    //removeSkippedResponses();
 
     storeBuffer.step();
 }
