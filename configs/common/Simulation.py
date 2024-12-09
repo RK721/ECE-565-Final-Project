@@ -461,6 +461,29 @@ def run(options, root, testsys, cpu_class):
         for i in range(np):
             testsys.cpu[i].max_insts_any_thread = options.maxinsts
 
+    if options.lvptSize:
+        for i in range(np):
+            if testsys.cpu[i].type == 'BaseMinorCPU':
+                testsys.cpu[i].lvptSize = options.lvptSize
+
+    if options.lctSize:
+        for i in range(np):
+            if testsys.cpu[i].type == 'BaseMinorCPU':
+                testsys.cpu[i].lctSize = options.lctSize
+
+    if options.lctStateBits:
+        for i in range(np):
+            if testsys.cpu[i].type == 'BaseMinorCPU':
+                testsys.cpu[i].lctBits = options.lctStateBits
+
+    for i in range(np):
+        if testsys.cpu[i].type == 'BaseMinorCPU':
+            testsys.cpu[i].enableLVP = options.enableLVP
+
+    for i in range(np):
+        if testsys.cpu[i].type == 'BaseMinorCPU':
+            testsys.cpu[i].enableConstantLVP = options.enableConstantLVP
+
     if cpu_class:
         switch_cpus = [cpu_class(switched_out=True, cpu_id=(i))
                        for i in range(np)]
@@ -477,6 +500,29 @@ def run(options, root, testsys, cpu_class):
             # simulation period
             if options.maxinsts:
                 switch_cpus[i].max_insts_any_thread = options.maxinsts
+            if options.lvptSize:
+                for i in range(np):
+                    if switch_cpus[i].type == 'BaseMinorCPU':
+                        switch_cpus[i].lvptSize = options.lvptSize
+
+            if options.lctSize:
+                for i in range(np):
+                    if switch_cpus[i].type == 'BaseMinorCPU':
+                        switch_cpus[i].lctSize = options.lctSize
+
+            if options.lctStateBits:
+                for i in range(np):
+                    if switch_cpus[i].type == 'BaseMinorCPU':
+                        switch_cpus[i].lctBits = options.lctStateBits
+
+            for i in range(np):
+                if switch_cpus[i].type == 'BaseMinorCPU':
+                    switch_cpus[i].enableLVP = options.enableLVP
+
+            for i in range(np):
+                if switch_cpus[i].type == 'BaseMinorCPU':
+                    switch_cpus[i].enableConstantLVP = options.enableConstantLVP
+
             # Add checker cpu if selected
             if options.checker:
                 switch_cpus[i].addCheckerCpu()
@@ -520,6 +566,29 @@ def run(options, root, testsys, cpu_class):
             if options.maxinsts:
                 repeat_switch_cpus[i].max_insts_any_thread = options.maxinsts
 
+            if options.lvptSize:
+                for i in range(np):
+                    if repeat_switch_cpus[i].type == 'BaseMinorCPU':
+                        repeat_switch_cpus[i].lvptSize = options.lvptSize
+
+            if options.lctSize:
+                for i in range(np):
+                    if repeat_switch_cpus[i].type == 'BaseMinorCPU':
+                        repeat_switch_cpus[i].lctSize = options.lctSize
+
+            if options.lctStateBits:
+                for i in range(np):
+                    if repeat_switch_cpus[i].type == 'BaseMinorCPU':
+                        repeat_switch_cpus[i].lctBits = options.lctStateBits
+
+            for i in range(np):
+                if repeat_switch_cpus[i].type == 'BaseMinorCPU':
+                    repeat_switch_cpus[i].enableLVP = options.enableLVP
+
+            for i in range(np):
+                if repeat_switch_cpus[i].type == 'BaseMinorCPU':
+                    repeat_switch_cpus[i].enableConstantLVP = options.enableConstantLVP
+                    
             if options.checker:
                 repeat_switch_cpus[i].addCheckerCpu()
 
@@ -571,7 +640,30 @@ def run(options, root, testsys, cpu_class):
             # simulation period
             if options.maxinsts:
                 switch_cpus_1[i].max_insts_any_thread = options.maxinsts
+                
+            if options.lvptSize:
+                for i in range(np):
+                    if switch_cpus_1[i].type == 'BaseMinorCPU':
+                        switch_cpus_1[i].lvptSize = options.lvptSize
 
+            if options.lctSize:
+                for i in range(np):
+                    if switch_cpus_1[i].type == 'BaseMinorCPU':
+                        switch_cpus_1[i].lctSize = options.lctSize
+
+            if options.lctStateBits:
+                for i in range(np):
+                    if switch_cpus_1[i].type == 'BaseMinorCPU':
+                        switch_cpus_1[i].lctBits = options.lctStateBits
+
+            for i in range(np):
+                if switch_cpus_1[i].type == 'BaseMinorCPU':
+                    switch_cpus_1[i].enableLVP = options.enableLVP
+
+            for i in range(np):
+                if switch_cpus_1[i].type == 'BaseMinorCPU':
+                    switch_cpus_1[i].enableConstantLVP = options.enableConstantLVP
+                 
             # attach the checker cpu if selected
             if options.checker:
                 switch_cpus[i].addCheckerCpu()
