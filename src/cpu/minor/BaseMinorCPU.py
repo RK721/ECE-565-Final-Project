@@ -128,19 +128,19 @@ class MinorDefaultIntFU(MinorFU):
     opClasses = minorMakeOpClassSet(['IntAlu'])
     timings = [MinorFUTiming(description="Int",
         srcRegsRelativeLats=[2])]
-    opLat = 1 # 3
+    opLat = 1
 
 class MinorDefaultIntMulFU(MinorFU):
     opClasses = minorMakeOpClassSet(['IntMult'])
     timings = [MinorFUTiming(description='Mul',
         srcRegsRelativeLats=[0])]
-    issueLat = 16 
-    opLat = 16 # 3
+    issueLat = 16
+    opLat = 16
 
 class MinorDefaultIntDivFU(MinorFU):
     opClasses = minorMakeOpClassSet(['IntDiv'])
-    issueLat = 16 # 9
-    opLat = 16 # 9
+    issueLat = 16
+    opLat = 16
 
 class MinorDefaultFloatSimdFU(MinorFU):
     opClasses = minorMakeOpClassSet([
@@ -158,7 +158,7 @@ class MinorDefaultFloatSimdFU(MinorFU):
 
     timings = [MinorFUTiming(description='FloatSimd',
         srcRegsRelativeLats=[2])]
-    opLat = 50 # 6
+    opLat = 50
 
 class MinorDefaultPredFU(MinorFU):
     opClasses = minorMakeOpClassSet(['SimdPredAlu'])
@@ -246,7 +246,7 @@ class BaseMinorCPU(BaseCPU):
         "Number of issuable instructions in Execute each cycle")
     executeMemoryIssueLimit = Param.Unsigned(1,
         "Number of issuable memory instructions in Execute each cycle")
-    executeCommitLimit = Param.Unsigned(2,
+    executeCommitLimit = Param.Unsigned(1,
         "Number of committable instructions in Execute each cycle")
     executeMemoryCommitLimit = Param.Unsigned(1,
         "Number of committable memory references in Execute each cycle")
@@ -287,7 +287,7 @@ class BaseMinorCPU(BaseCPU):
 
     branchPred = Param.BranchPredictor(TournamentBP(
         numThreads = Parent.numThreads), "Branch Predictor")
-
+        
     def addCheckerCpu(self):
         print("Checker not yet supported by MinorCPU")
         exit(1)
